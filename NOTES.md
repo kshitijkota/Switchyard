@@ -335,6 +335,28 @@ modest cost; beyond it cost ~triples for no honesty gain (worse). True policy
 value stays ~flat (41.2–41.5k). Turns the earlier "epistemic-only" concession
 into a quantified curve with a stated knee.
 
+### 2026-09-05 — TASK 5: ship + cold-clone verification
+
+- `.env` confirmed untracked and gitignored (`git ls-files --error-unmatch .env`
+  fails; `git check-ignore .env` matches). No key is committed anywhere; the repo
+  is safe to make public.
+- **Cold-clone test (passed).** Cloned the repo fresh into a clean temp dir with
+  no prior state and no `.env`, created a fresh venv, `pip install -r
+  requirements.txt` (all deps resolved), and ran `python verify.py`:
+  **exit 0** — 20 tests passed, every artifact regenerated, and the diagnosis
+  reproduced from the committed Gemini cache **with no API key**
+  (`measured_by=gemini (from committed cache), 9/19`). Every number in the README
+  appears in the verify.py output (legacy 40117.1, OPE direct-greedy 41763.5 /
+  adversarial 38974.3, exploration curve, money recovered ₹6361.63, diagnosis
+  Gemini 9/19 + statistical 0.923/0.667/0.105, held-out table).
+- Pushed all TASK 1–5 commits to `origin main`.
+- **Repo visibility:** `gh` is not installed and there is no GitHub token in the
+  environment, and the stored push credential is a key that must not be printed,
+  so the public flip could not be done from here. The owner must set it via
+  GitHub → Settings → General → Danger Zone → Change visibility → Public. The
+  code is pushed and the cold clone verifies green; only the visibility toggle
+  remains, and it is a one-click owner action.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
