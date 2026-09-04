@@ -132,6 +132,22 @@ class QModel:
         self._n_features_base = base.shape[1]
         return self
 
+    def success_proba(self, methods, issuers, amounts, hours) -> np.ndarray:
+        """Predicted P(success) as (N, 3) for routing each context to each
+        processor. Used by the naive success-rate router (§1's fee-blind
+        strawman) — it maximises predicted success, ignoring fees."""
+        n = len(amounts)
+        m = np.zeros((n, len(METHODS))); s = np.zeros((n, len(ISSUERS)))
+        m[np.arange(n), [_METHOD_IDX[x] for x in methods]] = 1.0
+        s[np.arange(n), [_ISSUER_IDX[x] for x in issuers]] = 1.0
+        num = np.column_stack([np.log1p(np.asarray(amounts, dtype=np.float64)),
+                               np.asarray(hours, dtype=np.float64)])
+        base = np.hstack([m, s, num])
+        out = np.empty((n, len(PROCESSORS)))
+        for p in range(len(PROCESSORS)):
+            out[:, p] = self.clf.predict_proba(np.hstack([base, _proc_onehot(n, p)]))[:, 1]
+        return out
+
     def expected_reward(self, ds: LoggedDataset) -> np.ndarray:
         """Return (N, 3) expected net reward in paise: P̂(success|x_i,p) times the
         realised-on-success reward for routing x_i to each processor p."""
@@ -258,8 +274,23 @@ class Method:
     def estimated_value_per_1k(self) -> float:
         """Self-estimated value of this method's policy, ₹ per 1,000 txns, using
         the empirical cell frequencies of its own dataset."""
-        pv = self.policy_value_per_cell()
+        return self.value_of_policy(self.policy_idx)
+
+    def value_of_policy(self, policy_idx: np.ndarray) -> float:
+        """This estimator's estimate of the value of an ARBITRARY per-cell policy
+        (₹/1k txns), using its own data's cell frequencies. This is the off-policy
+        *evaluation* the honesty benchmark turns on: point a starved-cell-visiting
+        policy at each estimator and see which stays honest against the truth."""
         mask = self.n_c > 0
         freq = self.n_c[mask] / self.n_c[mask].sum()
-        per_txn_paise = float(np.nansum(freq * pv[mask]))
-        return per_txn_paise * 10.0  # paise/txn -> ₹/1k txns
+        chosen_vals = self.value_table[np.arange(N_CELLS), policy_idx][mask]
+        per_txn_paise = float(np.nansum(freq * chosen_vals))
+        return per_txn_paise * 10.0
+
+    def policy_coverage(self, policy_idx: np.ndarray) -> float:
+        """Fraction of (frequency-weighted) cells where this estimator can even
+        evaluate the given policy (non-nan). Low ⇒ it is guessing."""
+        mask = self.n_c > 0
+        freq = self.n_c[mask] / self.n_c[mask].sum()
+        defined = ~np.isnan(self.value_table[np.arange(N_CELLS), policy_idx][mask])
+        return float(freq[defined].sum())

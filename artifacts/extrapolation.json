@@ -1,0 +1,54 @@
+{
+  "note": "legacy sends >\u20b95,000 to pb, starving pa; direct extrapolates pa's small-ticket success and never learns the \u22120.18 drop.",
+  "rows": [
+    {
+      "amount_rupees": 200,
+      "gap": 0.02,
+      "predicted_pa_success": 0.88,
+      "true_pa_success": 0.86
+    },
+    {
+      "amount_rupees": 600,
+      "gap": 0.02,
+      "predicted_pa_success": 0.88,
+      "true_pa_success": 0.86
+    },
+    {
+      "amount_rupees": 2000,
+      "gap": -0.03,
+      "predicted_pa_success": 0.83,
+      "true_pa_success": 0.86
+    },
+    {
+      "amount_rupees": 4000,
+      "gap": -0.049,
+      "predicted_pa_success": 0.811,
+      "true_pa_success": 0.86
+    },
+    {
+      "amount_rupees": 7000,
+      "gap": 0.098,
+      "predicted_pa_success": 0.778,
+      "true_pa_success": 0.68
+    },
+    {
+      "amount_rupees": 12000,
+      "gap": 0.101,
+      "predicted_pa_success": 0.781,
+      "true_pa_success": 0.68
+    },
+    {
+      "amount_rupees": 30000,
+      "gap": 0.101,
+      "predicted_pa_success": 0.781,
+      "true_pa_success": 0.68
+    },
+    {
+      "amount_rupees": 80000,
+      "gap": 0.102,
+      "predicted_pa_success": 0.782,
+      "true_pa_success": 0.68
+    }
+  ],
+  "segment": "card \u00d7 hdfc"
+}

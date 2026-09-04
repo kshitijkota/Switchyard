@@ -209,6 +209,44 @@ The design iterated (v1→v4) by understanding the failure mechanism, not by
 fishing magnitudes: −0.18 is fixed by principle and whatever numbers it yields
 are reported as-is. Frozen through the held-out run (§12.5).
 
+### 2026-09-04 20:10 IST — Eval harness built + final results (step 7)
+
+Numbers below are produced by `eval/harness.py` (10 seeds × 20k = 200k eval txns,
+common random numbers, 1000-resample paired bootstrap). Legacy baseline 40117,
+oracle 42325, naive fee-blind success-router **39862 (below legacy!)** — §1's
+second point, that success-rate routing loses money on fees, reproduces.
+
+Results table (₹/1k): estimated / true / error:
+- direct 42410 / 41764 / **+646**   (true value highest — a strong GBM)
+- ips    42994 / 40436 / **+2558**
+- snips  43070 / 40626 / +2445
+- dr     42987 / 41005 / +1981
+- chowk  42180 / 41238 / **+942**    (2nd-best true value, beats all reweighting)
+
+**OPE honesty (the headline).** Value of a FIXED starved-region policy
+(direct-greedy, routes large→pa), true 41764:
+  chowk **+17** · dr +259 · direct +646 · snips −1138 · ips −2101.
+chowk is the only estimator that stays honest into the unexplored region.
+Adversarial "all large→pa" policy (true 38974): direct overstates by **+1954** —
+it would deploy a money-loser believing it great.
+
+**The clean evidence** (`artifacts/extrapolation.json`): direct's predicted pa
+success is accurate below ₹5k (gap ≈ +0.02) but a persistent **+0.10 too high
+above ₹5k** (predicts ~0.78, truth 0.68) — the region legacy starves.
+
+Segment table (hdfc×upi, average-based true best): all methods correct on
+<₹10k; on >₹10k direct/ips/chowk pick pa (wrong), snips/dr pick pc — that cell's
+true best (pc) is starved for *everyone* (≤46 samples even combined), so it stays
+contested. Honest nuance, reported as-is.
+
+Interpretation (honest): a well-regularised GBM (direct) is a strong policy on
+smooth structure — the naive method is NOT simply "bad". Its real danger is
+epistemic: it cannot tell a good policy from a bad one where it never explored,
+and it overstates any policy that ventures there. At ε=0.03 chowk's edge is
+primarily this honesty (OPE), plus a modest, real policy gain over the other
+off-policy methods; a thicker budget would be needed to fully resolve the deepest
+starved cells. This will be stated plainly in the README (no overselling).
+
 ### Open questions
 
 - None blocking yet.

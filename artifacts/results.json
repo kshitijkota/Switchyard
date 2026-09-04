@@ -1,0 +1,319 @@
+{
+  "adversarial_honesty": {
+    "estimators": {
+      "chowk": {
+        "coverage": 1.0,
+        "error": 1302.5,
+        "estimate": 40276.8
+      },
+      "direct": {
+        "coverage": 1.0,
+        "error": 1954.2,
+        "estimate": 40928.5
+      },
+      "dr": {
+        "coverage": 1.0,
+        "error": 1606.5,
+        "estimate": 40580.8
+      },
+      "ips": {
+        "coverage": 1.0,
+        "error": 1188.5,
+        "estimate": 40162.8
+      },
+      "snips": {
+        "coverage": 1.0,
+        "error": 1278.5,
+        "estimate": 40252.8
+      }
+    },
+    "target_policy": "adversarial: ALL large tickets \u2192 pa (the trap)",
+    "true_value": 38974.3
+  },
+  "config": {
+    "bootstrap_resamples": 1000,
+    "eval_seeds": [
+      2000,
+      2001,
+      2002,
+      2003,
+      2004,
+      2005,
+      2006,
+      2007,
+      2008,
+      2009
+    ],
+    "n_eval_txns": 200000,
+    "n_per_seed": 20000
+  },
+  "exploration_accounting": {
+    "defensible_routed_value_rupees": 8163129.25,
+    "n_explore_txns": 6021,
+    "n_total_txns": 200000,
+    "sentence": "Spent \u20b99,321 to keep \u20b98,163,129 of routing decisions defensible.",
+    "spent_rupees": 9321.41
+  },
+  "legacy_baseline_value": 40117.1,
+  "naive_success_router_value": 39861.9,
+  "ope_honesty": {
+    "estimators": {
+      "chowk": {
+        "coverage": 1.0,
+        "error": 17.3,
+        "estimate": 41780.8
+      },
+      "direct": {
+        "coverage": 1.0,
+        "error": 646.5,
+        "estimate": 42410.0
+      },
+      "dr": {
+        "coverage": 1.0,
+        "error": 258.8,
+        "estimate": 42022.4
+      },
+      "ips": {
+        "coverage": 1.0,
+        "error": -2100.7,
+        "estimate": 39662.8
+      },
+      "snips": {
+        "coverage": 0.9991,
+        "error": -1138.5,
+        "estimate": 40625.0
+      }
+    },
+    "target_policy": "direct-greedy (visits starved large\u2192pa)",
+    "true_value": 41763.5
+  },
+  "oracle_value": 42325.3,
+  "pa_extrapolation": {
+    "note": "legacy sends >\u20b95,000 to pb, starving pa; direct extrapolates pa's small-ticket success and never learns the \u22120.18 drop.",
+    "rows": [
+      {
+        "amount_rupees": 200,
+        "gap": 0.02,
+        "predicted_pa_success": 0.88,
+        "true_pa_success": 0.86
+      },
+      {
+        "amount_rupees": 600,
+        "gap": 0.02,
+        "predicted_pa_success": 0.88,
+        "true_pa_success": 0.86
+      },
+      {
+        "amount_rupees": 2000,
+        "gap": -0.03,
+        "predicted_pa_success": 0.83,
+        "true_pa_success": 0.86
+      },
+      {
+        "amount_rupees": 4000,
+        "gap": -0.049,
+        "predicted_pa_success": 0.811,
+        "true_pa_success": 0.86
+      },
+      {
+        "amount_rupees": 7000,
+        "gap": 0.098,
+        "predicted_pa_success": 0.778,
+        "true_pa_success": 0.68
+      },
+      {
+        "amount_rupees": 12000,
+        "gap": 0.101,
+        "predicted_pa_success": 0.781,
+        "true_pa_success": 0.68
+      },
+      {
+        "amount_rupees": 30000,
+        "gap": 0.101,
+        "predicted_pa_success": 0.781,
+        "true_pa_success": 0.68
+      },
+      {
+        "amount_rupees": 80000,
+        "gap": 0.102,
+        "predicted_pa_success": 0.782,
+        "true_pa_success": 0.68
+      }
+    ],
+    "segment": "card \u00d7 hdfc"
+  },
+  "results_table": [
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 42410.0,
+      "estimation_error": 646.5,
+      "improvement_ci": [
+        1626.1,
+        1667.0
+      ],
+      "improvement_over_legacy": 1646.4,
+      "method": "direct",
+      "n_clipped": 0,
+      "true_value": 41763.5,
+      "true_value_ci": [
+        41435.7,
+        42127.9
+      ]
+    },
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 42994.3,
+      "estimation_error": 2558.2,
+      "improvement_ci": [
+        289.2,
+        347.0
+      ],
+      "improvement_over_legacy": 319.0,
+      "method": "ips",
+      "n_clipped": 0,
+      "true_value": 40436.1,
+      "true_value_ci": [
+        40127.1,
+        40775.0
+      ]
+    },
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 43070.3,
+      "estimation_error": 2444.7,
+      "improvement_ci": [
+        481.0,
+        537.6
+      ],
+      "improvement_over_legacy": 508.5,
+      "method": "snips",
+      "n_clipped": 0,
+      "true_value": 40625.6,
+      "true_value_ci": [
+        40317.4,
+        40967.6
+      ]
+    },
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 42986.6,
+      "estimation_error": 1981.3,
+      "improvement_ci": [
+        862.8,
+        913.6
+      ],
+      "improvement_over_legacy": 888.3,
+      "method": "dr",
+      "n_clipped": 0,
+      "true_value": 41005.4,
+      "true_value_ci": [
+        40685.5,
+        41357.3
+      ]
+    },
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 42180.4,
+      "estimation_error": 942.1,
+      "improvement_ci": [
+        1099.8,
+        1142.4
+      ],
+      "improvement_over_legacy": 1121.2,
+      "method": "chowk",
+      "n_clipped": 4039,
+      "true_value": 41238.3,
+      "true_value_ci": [
+        40917.9,
+        41596.9
+      ]
+    }
+  ],
+  "segment_table": [
+    {
+      "bucket": "<\u20b9300",
+      "picks": {
+        "chowk": "pb",
+        "direct": "pb",
+        "dr": "pb",
+        "ips": "pb",
+        "snips": "pb"
+      },
+      "segment": "upi\u00d7hdfc\u00d7<\u20b9300",
+      "true_best": "pb",
+      "true_expected_reward": {
+        "pa": -38,
+        "pb": 271,
+        "pc": 121
+      }
+    },
+    {
+      "bucket": "\u20b9300\u20131k",
+      "picks": {
+        "chowk": "pb",
+        "direct": "pb",
+        "dr": "pb",
+        "ips": "pb",
+        "snips": "pb"
+      },
+      "segment": "upi\u00d7hdfc\u00d7\u20b9300\u20131k",
+      "true_best": "pb",
+      "true_expected_reward": {
+        "pa": 789,
+        "pb": 926,
+        "pc": 824
+      }
+    },
+    {
+      "bucket": "\u20b91k\u20133k",
+      "picks": {
+        "chowk": "pa",
+        "direct": "pa",
+        "dr": "pa",
+        "ips": "pa",
+        "snips": "pa"
+      },
+      "segment": "upi\u00d7hdfc\u00d7\u20b91k\u20133k",
+      "true_best": "pa",
+      "true_expected_reward": {
+        "pa": 2990,
+        "pb": 2669,
+        "pc": 2694
+      }
+    },
+    {
+      "bucket": "\u20b93k\u201310k",
+      "picks": {
+        "chowk": "pa",
+        "direct": "pa",
+        "dr": "pa",
+        "ips": "pa",
+        "snips": "pa"
+      },
+      "segment": "upi\u00d7hdfc\u00d7\u20b93k\u201310k",
+      "true_best": "pa",
+      "true_expected_reward": {
+        "pa": 8415,
+        "pb": 7807,
+        "pc": 8208
+      }
+    },
+    {
+      "bucket": ">\u20b910k",
+      "picks": {
+        "chowk": "pa",
+        "direct": "pa",
+        "dr": "pc",
+        "ips": "pa",
+        "snips": "pc"
+      },
+      "segment": "upi\u00d7hdfc\u00d7>\u20b910k",
+      "true_best": "pc",
+      "true_expected_reward": {
+        "pa": 28916,
+        "pb": 28559,
+        "pc": 30477
+      }
+    }
+  ]
+}
