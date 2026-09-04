@@ -148,6 +148,13 @@ class QModel:
             out[:, p] = self.clf.predict_proba(np.hstack([base, _proc_onehot(n, p)]))[:, 1]
         return out
 
+    def expected_reward_for(self, context) -> np.ndarray:
+        """Expected net reward (paise) for one context routed to each processor."""
+        sp = self.success_proba([context.method], [context.issuer],
+                                [context.amount_paise], [context.hour])[0]
+        return np.array([sp[p] * ec.reward_if_success_paise(proc, context.amount_paise)
+                         for p, proc in enumerate(PROCESSORS)], dtype=np.float64)
+
     def expected_reward(self, ds: LoggedDataset) -> np.ndarray:
         """Return (N, 3) expected net reward in paise: P̂(success|x_i,p) times the
         realised-on-success reward for routing x_i to each processor p."""
@@ -262,6 +269,15 @@ class Method:
 
     def recommend(self, context) -> str:
         return self.recommend_cell(cell_of(context.method, context.issuer, context.amount_paise))
+
+    def expected_reward_for(self, context) -> np.ndarray:
+        """Per-processor expected net reward (paise) for one context — the routing
+        brain used by the recovery loop. Uses the Q-model when present (direct/dr/
+        chowk); otherwise falls back to this method's per-cell value table."""
+        if self._qmodel is not None:
+            return self._qmodel.expected_reward_for(context)
+        ci = CELL_INDEX[cell_of(context.method, context.issuer, context.amount_paise)]
+        return self.value_table[ci]
 
     def policy_value_per_cell(self) -> np.ndarray:
         """V[c, π(c)] for each cell (paise/txn), nan where cell empty."""

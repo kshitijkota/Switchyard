@@ -18,5 +18,13 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   50 caps any single sample's leverage (trading a small downward bias for a large
   variance reduction); the number of clipped samples is reported so the bias is
   visible, not hidden.
-- **Why SQLite WAL over an application mutex** — _to be written with step 8._
+- **Why SQLite WAL over an application mutex.** Idempotency must survive process
+  restarts and concurrent workers, which an in-process mutex cannot: a mutex is
+  lost on crash and does not coordinate across processes. A SQLite table with
+  `txn_id` as PRIMARY KEY makes "has this txn been reserved?" a durable, atomic
+  question — the first INSERT wins, concurrent duplicates hit the constraint and
+  are turned away. WAL mode lets readers and a writer proceed without blocking
+  each other and, with a busy timeout, serialises concurrent writers cleanly, so
+  the 10-concurrent-identical-events test yields exactly one attempt. The store
+  is the source of truth; no application-level lock is needed.
 - **Why the LLM is confined to diagnosis** — _to be written with step 9._
