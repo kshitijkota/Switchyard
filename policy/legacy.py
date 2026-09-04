@@ -7,6 +7,11 @@ Generates the confounded logs. Stochastic but heavily skewed, so some
     elif method == 'upi':        pa 0.90, pc 0.07, pb 0.03
     else:                        pc 0.85, pa 0.10, pb 0.05
 
+This matches §5 exactly. Note that >₹5,000 traffic goes almost entirely to pb,
+starving pa and pc on large tickets — which is precisely where the latent truth
+hides pa's large-ticket weakness (sim/ground_truth.py), so a model trained on
+these logs never learns it.
+
 The propensity of the chosen processor is recorded AT DECISION TIME. It is never
 reconstructed later — that is ABSOLUTE RULE 2.
 """
@@ -29,6 +34,13 @@ def probs(context: Context) -> dict[str, float]:
     if context.method == "upi":
         return {"pa": 0.90, "pb": 0.03, "pc": 0.07}
     return {"pa": 0.10, "pb": 0.05, "pc": 0.85}
+
+
+def legacy_mode(context: Context) -> str:
+    """The deterministic argmax of the legacy selection probabilities. Used as
+    the (deployment) exploit base for the ε-exploration slice."""
+    p = probs(context)
+    return max(p, key=p.__getitem__)
 
 
 class LegacyPolicy:

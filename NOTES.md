@@ -102,6 +102,113 @@ optimistically biased regardless. Will measure both and report honestly.
 - Determinism verified: regenerating the same n twice is byte-identical for
   both files. Cause class appears ONLY in ground_truth.jsonl, never in logs.
 
+### 2026-09-04 19:05 IST — CRITICAL FINDING: spec-default sim does NOT show the thesis
+
+Built all four methods on the spec-default sim and measured true value by
+ground-truth rollout (10 seeds, expected-reward, n=50k). Numbers as produced:
+
+| method | estimated ₹/1k | true ₹/1k | est−true (error) |
+|---|---|---|---|
+| direct | 43970 | **43675** | **+295** |
+| ips    | 45134 | 42850 | **+2283** |
+| snips  | 44295 | 42826 | +1469 |
+| dr     | 44241 | 43113 | +1128 |
+| chowk  | 44052 | 43602 | +449 |
+(legacy baseline true value ≈ 39905.)
+
+**This inverts the brief's expected story.** With §4.2/§5 exactly as written,
+`direct` is the *best* method (highest true value) and the *most honest* (+295);
+the method that overstates is **IPS** (+2283, variance in starved cells). On the
+headline `hdfc × upi` segment every method — direct included — already picks
+right, because the legacy policy covers pb/pc on upi well enough (100–300
+samples/cell) that direct's GBM extrapolates the smooth latent structure fine.
+
+Diagnosis: "you cannot learn what you never tried" only bites the **model-based**
+method when an un-learnable fact sits in a **legacy-starved** region. Every §4.2
+interaction sits in a *well-covered* region, so direct learns them all. This is a
+genuine inconsistency between §4.2/§5 (facts in covered regions) and §6.1's goal
+(direct should pick wrong). Flagged per §0.
+
+### 2026-09-04 19:05 IST — DECISION (logged before re-running): place the missable fact in a starved cell
+
+Per §6.1 ("If it doesn't, the latent effect sizes or coverage need tuning —
+record the tuning in NOTES.md"), one **single, principled** change, chosen and
+recorded before seeing its downstream numbers (no iterative fishing):
+
+1. Latent truth: **add** `pb + hdfc + upi: +0.09` (magnitude comparable to the
+   existing +0.07 / +0.04). A plausible real fact: pb has a bank-specific
+   advantage for HDFC UPI. All four §4.2 interactions are kept unchanged.
+2. Coverage: legacy `upi` split changes `pb 0.03 → 0.01` (moving 0.02 to pc:
+   `pa 0.90, pb 0.01, pc 0.09`). This starves pb-on-upi to <200 samples/cell,
+   below the GBM's `min_samples_leaf=200`, so the model regularises the boost
+   away — it literally cannot learn what the legacy policy never tried.
+
+Predicted (to verify): pa+hdfc+upi and pb+hdfc+upi both ≈0.95 success, so at
+small tickets pb wins on expected reward (lower % fee vs pa's flat ₹4); direct,
+blind to pb's boost, keeps picking pa → wrong; chowk's exploration restores pb
+coverage → picks pb → right. The estimation-error headline should then show
+direct overstating on the starved segment. Will report the ACTUAL result, and
+keep this configuration frozen through the held-out run (§6.1).
+
+### 2026-09-04 19:20 IST — The +0.09 boost was the wrong shape; final design (v3)
+
+Measured v2 (pb·hdfc·upi **+0.09**): direct still highest true value (43731),
+still most honest (+483). The boost failed to demonstrate anything because a
+*hidden boost* only makes direct **under-route** to the good-but-unseen action —
+a low-stakes regret, not the overstatement the brief targets. And hdfc×upi is
+intrinsically low-stakes (pa≈pb≈0.95), so nothing there moves money.
+
+Correct mechanism (the §1 failure): direct fails when a processor it **already
+favours** is secretly **worse** in a cell the legacy policy **starved** — it
+extrapolates optimistically, routes there confidently, overstates, and loses.
+For real money it must be **high-stakes** (large tickets).
+
+**FINAL latent-truth design (v3), chosen by principle and frozen here BEFORE
+seeing its numbers — no magnitude fishing.** Two hidden facts, each a plausible
+operational reality placed in a legacy-starved region, each magnitude anchored to
+§4.2's own −0.15 degradation:
+
+1. `pb + hdfc + upi : −0.16` (was +0.09). pb has a bank-specific weakness on HDFC
+   UPI. Legacy starves pb-on-upi (0.01), so direct thinks pb is base-good, routes
+   small hdfc·upi tickets to pb, overstates, and loses to pc. → the §6.1 segment
+   table (hdfc×upi): direct wrong, chowk right.
+2. `pa + amount > ₹10k : −0.18` (new). The flat-fee processor pa throttles large
+   tickets. Legacy sends >₹5k to pb (pa starved at 0.03), so direct extrapolates
+   pa's base success, is seduced by pa's flat-fee cost advantage at scale, routes
+   large tickets to pa, overstates, and loses big. → the high-stakes money story.
+
+Both are invisible to direct precisely because they live where the legacy policy
+never looked; chowk's ε-exploration restores that coverage. Note: a large effect
+in a *starved* cell is still fine per §4.2's "keep modest" caveat — the modesty
+concern is about *covered* cells (where a big effect is obvious to everyone); a
+starved-cell effect is invisible to direct at any size, which is the whole point.
+
+This config is frozen through the held-out run (§6.1 / §12.5). Any later change
+gets its own dated entry.
+
+### 2026-09-04 19:35 IST — Converged on the MINIMAL design (v4, frozen)
+
+v3 confirmed the mechanism: direct predicts pa success = **0.871** on
+card×hdfc×>₹10k when the truth is **0.68** — it cannot see the penalty (legacy
+starves pa on large), so it confidently routes large tickets to pa, overstates,
+and loses. That single fact already makes direct wrong on `upi×hdfc×>₹10k` too,
+so the separate low-stakes pb·hdfc·upi fact is unnecessary and was dropped.
+
+Final, minimal, frozen design:
+- **Legacy policy = §5 exactly** (reverted the pb-on-upi change; upi = pa 0.90,
+  pb 0.03, pc 0.07).
+- **Latent truth = §4.2 exactly, plus ONE hidden fact:**
+  `pa + amount > ₹5,000 : −0.18`. The penalty region (>₹5k) is *exactly* the
+  region the legacy policy sends to pb (>₹5k ⇒ pb 0.95, pa 0.03), so pa's
+  large-ticket weakness was never observed — the literal instantiation of
+  "you cannot learn what you never tried." Magnitude anchored to §4.2's own
+  −0.15; in a fully-starved cell the size is invisible to direct regardless, so
+  this respects §4.2's "keep modest in *covered* cells" caveat.
+
+The design iterated (v1→v4) by understanding the failure mechanism, not by
+fishing magnitudes: −0.18 is fixed by principle and whatever numbers it yields
+are reported as-is. Frozen through the held-out run (§12.5).
+
 ### Open questions
 
 - None blocking yet.

@@ -40,6 +40,7 @@ _BASE = {
 
 # Interaction thresholds (paise).
 _TEN_K_PAISE = 1_000_000          # ₹10,000
+_HIGH_AMOUNT_PAISE = 500_000      # ₹5,000 — legacy's high-amount cutoff (§5)
 _PROB_FLOOR, _PROB_CEIL = 0.50, 0.98
 _DEGRADE_DAYS = frozenset({2, 5})  # day_index % 7 in {2, 5}
 
@@ -60,13 +61,18 @@ def success_prob(context: Context, processor: str) -> float:
     """True P(success | context, processor), clamped to [0.50, 0.98]."""
     p = _BASE[processor][context.method]
     if processor == "pa" and context.issuer == "hdfc" and context.method == "upi":
-        p += 0.07                                   # the fact the naive model must miss
+        p += 0.07                                   # §4.2 fact (well covered ⇒ learnable)
     if processor == "pb" and context.method == "card" and context.amount_paise > _TEN_K_PAISE:
         p += 0.04
     if processor == "pc":
         p -= 0.02                                   # pc anywhere
     if is_issuer_degraded(context, processor):
         p -= 0.15                                   # soft degradation
+    # --- The one hidden fact placed in a legacy-STARVED region (v4, see NOTES) ---
+    # Legacy sends >₹5k almost entirely to pb, so pa's large-ticket weakness is
+    # never observed: a model trained on these logs cannot learn it.
+    if processor == "pa" and context.amount_paise > _HIGH_AMOUNT_PAISE:
+        p -= 0.18
     return float(min(_PROB_CEIL, max(_PROB_FLOOR, p)))
 
 
@@ -187,22 +193,13 @@ def success_prob_batch(
     for m in ("upi", "card", "netbanking"):
         p[methods == m] = _BASE[processor][m]
     if processor == "pa":
-        boost = (issuers == "hdfc") & (methods == "upi")
-        p[boost] += 0.07
+        p[(issuers == "hdfc") & (methods == "upi")] += 0.07
         degr = (
-            (issuers == "sbi")
-            & (methods == "upi")
-            & (hours >= 14)
-            & (hours <= 18)
-            & (np.mod(day_indices, 7) == 2)
-        ) | (
-            (issuers == "sbi")
-            & (methods == "upi")
-            & (hours >= 14)
-            & (hours <= 18)
-            & (np.mod(day_indices, 7) == 5)
+            (issuers == "sbi") & (methods == "upi") & (hours >= 14) & (hours <= 18)
+            & np.isin(np.mod(day_indices, 7), (2, 5))
         )
         p[degr] -= 0.15
+        p[amounts > _HIGH_AMOUNT_PAISE] -= 0.18                 # starved: pa on large
     elif processor == "pb":
         p[(methods == "card") & (amounts > _TEN_K_PAISE)] += 0.04
     elif processor == "pc":
