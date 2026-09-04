@@ -1,0 +1,21 @@
+{
+  "crossovers": [
+    {
+      "amount_paise": 96203,
+      "amount_rupees": 962.03,
+      "from_processor": "pb",
+      "to_processor": "pa"
+    }
+  ],
+  "note": "Below the crossover the flat-fee processor is not the best expected-reward choice despite the best success rate.",
+  "segment": {
+    "hour": 12,
+    "issuer": "hdfc",
+    "method": "upi"
+  },
+  "success_prob": {
+    "pa": 0.95,
+    "pb": 0.86,
+    "pc": 0.85
+  }
+}

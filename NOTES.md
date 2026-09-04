@@ -54,6 +54,42 @@ I will BUILD the machinery honestly, then RUN it and report whatever actually
 happens. If the headline does not reproduce it will be tuned (logged here) or
 reported as a negative result (§12.6) — never fabricated.
 
+### 2026-09-04 18:34 IST — Simulator built (step 2)
+
+Sanity numbers from the actual generators (200k, seed 42):
+- amount: median ₹1,193 (target ~₹1,200), p99 ₹21,837, capped ₹200,000; 24.2%
+  of traffic under ₹500, 12.5% over ₹5,000, 4.5% over ₹10,000.
+- method 65/25/10, hdfc 24% (heavier), diurnal peaks at 11–13 and 19–21.
+- scalar vs vectorised `success_prob` agree exactly (maxdiff 0).
+- Mean success prob: pa 0.880, pb 0.866, pc 0.851 — modest spread as required.
+
+Crossover (`artifacts/crossover.json`, computed analytically, not eyeballed):
+for **hdfc × upi** the only argmax switch is **pb → pa at ₹962.03**. Below it pb
+is the better *expected-reward* choice even though pa has the higher *success
+rate* (0.95 vs 0.86) — the whole point of §1's second argument. Roughly 40% of
+upi traffic falls below this crossover.
+
+### 2026-09-04 18:34 IST — Decision: amount-bucket boundaries (for §6 cells)
+
+Cells are `(method, issuer, amount_bucket)`. Boundaries (paise), chosen at
+economically meaningful points — the fee crossovers above and the ₹10k
+interaction — NOT tuned against any result:
+`[0, 30k), [30k, 100k), [100k, 300k), [300k, 1_000k), [1_000k, ∞)`
+i.e. `<₹300, ₹300–1k, ₹1k–3k, ₹3k–10k, >₹10k`. The ₹962 crossover sits on the
+₹300–1k / ₹1k–3k boundary, so per-bucket argmax can separate "small ⇒ pb" from
+"large ⇒ pa". Recorded here per §12.4.
+
+### 2026-09-04 18:34 IST — Note on the "direct picks wrong" headline (pre-run)
+
+Reasoned through the mechanics: `direct` optimises expected *reward* (not
+success), so the crossover alone will not fool it if it learns success well.
+Its failure, if it occurs, must come from **coverage** (§1 first argument):
+biased success estimates in cells the legacy policy barely explored. Whether
+that bias is large enough to flip an argmax is an empirical question the brief
+explicitly flags as tunable/loggable (§6.1, §12.4). The **robust** headline is
+the *estimation-error* column (§6.1): `direct`'s plug-in self-estimate is
+optimistically biased regardless. Will measure both and report honestly.
+
 ### Open questions
 
 - None blocking yet.
