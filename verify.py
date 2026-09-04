@@ -60,7 +60,7 @@ def main() -> int:
     from sim.plots import make_crossover_plot
     from eval.harness import run_evaluation, RESULTS_PATH, print_results
     from recovery.evaluate import evaluate as rec_eval
-    from diagnose.evaluate import evaluate as diag_eval
+    from diagnose.evaluate import evaluate as diag_eval, RESULTS_PATH as DIAG_PATH, STATISTICAL_REF_PATH as DIAG_STAT
 
     crossover = guard("crossover plot", make_crossover_plot)
     results = guard("evaluation harness", run_evaluation)
@@ -77,9 +77,29 @@ def main() -> int:
         expl_plot(r)
         return r
 
+    def _diag():
+        r = diag_eval()
+        with open(DIAG_PATH, "w") as fh:
+            json.dump(r, fh, indent=2, sort_keys=True)
+        return r
+
+    def _diag_stat():
+        r = diag_eval(force_provider="statistical")
+        with open(DIAG_STAT, "w") as fh:
+            json.dump(r, fh, indent=2, sort_keys=True)
+        return r
+
     curve = guard("exploration price curve", _expl)
     recovery = guard("recovery evaluation", rec_eval)
-    diagnosis = guard("diagnosis evaluation", diag_eval)
+    diagnosis = guard("diagnosis (gemini/committed cache)", _diag)
+    diagnosis_stat = guard("diagnosis statistical reference", _diag_stat)
+
+    # held-out regime is run ONCE (RULE 5); read the committed artifact, never re-run.
+    heldout = None
+    _hp = os.path.join(ROOT, "artifacts", "heldout_results.json")
+    if os.path.exists(_hp):
+        with open(_hp) as fh:
+            heldout = json.load(fh)
 
     # ---- Reprint every number that appears in the README --------------------
     step("4. README numbers (single source of truth)")
@@ -116,9 +136,18 @@ def main() -> int:
               f"completed={diagnosis['cohorts_completed']}/{diagnosis['cohorts_total']}"
               f"{' (PARTIAL)' if diagnosis['partial_run'] else ''}")
         print(f"  accuracy_clear={diagnosis['accuracy_on_clear']} "
-              f"abstention_ambiguous={diagnosis['abstention_rate_on_ambiguous']} (rewarded) "
               f"harmful={diagnosis['harmful_error_rate']} parse_failure={diagnosis['parse_failure_rate']} "
               f"tokens={diagnosis['total_input_tokens']}in/{diagnosis['total_output_tokens']}out")
+    if diagnosis_stat:
+        print(f"[§8 diagnosis — offline statistical reference, NOT an LLM] "
+              f"accuracy_clear={diagnosis_stat['accuracy_on_clear']} "
+              f"abstention_ambiguous={diagnosis_stat['abstention_rate_on_ambiguous']} (rewarded) "
+              f"harmful={diagnosis_stat['harmful_error_rate']}")
+    if heldout:
+        print("\n[§6.1 held-out regime — read from the run-once artifact, not re-run]")
+        print(f"  legacy {heldout['legacy_baseline_value']}  oracle {heldout['oracle_value']} ₹/1k")
+        for row in heldout["results_table"]:
+            print(f"    {row['method']:11s} true_heldout={row['true_value_heldout']}")
 
     step("Summary")
     if FAILURES:
