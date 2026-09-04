@@ -21,7 +21,7 @@ import os
 import numpy as np
 
 from events import LoggedEvent, Outcome
-from policy.explore import EpsilonGreedyPolicy
+from policy.explore import EPSILON, EpsilonGreedyPolicy
 from policy.legacy import legacy_mode
 from sim import economics as ec
 from sim import ground_truth as gt
@@ -42,13 +42,14 @@ def generate(
     logs_path: str = EXPLORE_PATH,
     aux_path: str = EXPLORE_AUX_PATH,
     prefix: str = "exp_",
+    epsilon: float = EPSILON,
 ) -> dict:
     os.makedirs(os.path.dirname(logs_path), exist_ok=True)
     s_traffic, s_decide, s_outcome = np.random.SeedSequence(master_seed).spawn(3)
     ta = generate_traffic_arrays(n, seed=s_traffic, prefix=prefix)
     rng_decide = np.random.default_rng(s_decide)
     rng_outcome = np.random.default_rng(s_outcome)
-    policy = EpsilonGreedyPolicy(exploit_proc_fn=legacy_mode)
+    policy = EpsilonGreedyPolicy(exploit_proc_fn=legacy_mode, epsilon=epsilon)
 
     n_explore = 0
     n_success = 0

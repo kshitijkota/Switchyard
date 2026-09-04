@@ -67,6 +67,17 @@ def main() -> int:
     if results:
         with open(RESULTS_PATH, "w") as fh:
             json.dump(results, fh, indent=2, sort_keys=True)
+
+    from eval.exploration_curve import run as expl_run, make_plot as expl_plot, JSON_PATH as CURVE_JSON
+
+    def _expl():
+        r = expl_run()
+        with open(CURVE_JSON, "w") as fh:
+            json.dump(r, fh, indent=2, sort_keys=True)
+        expl_plot(r)
+        return r
+
+    curve = guard("exploration price curve", _expl)
     recovery = guard("recovery evaluation", rec_eval)
     diagnosis = guard("diagnosis evaluation", diag_eval)
 
@@ -84,6 +95,13 @@ def main() -> int:
     if results:
         print()
         print_results(results)
+    if curve:
+        print("\n[TASK 3 exploration price curve] ε: err_adv / err_starved / cost per 1k / true value")
+        for p in curve["points"]:
+            print(f"  ε={p['epsilon']:.2f}  err_adv={p['estimation_error_adversarial']['error']:.1f}  "
+                  f"err_starved={p['estimation_error_starved']['error']:.1f}  "
+                  f"cost={p['exploration_cost_per_1k']['value']:.1f}  "
+                  f"true={p['true_policy_value']['value']:.1f}")
     if recovery:
         m = recovery["money_recovered"]
         print(f"\n[§7 money recovered] {m['n_failures']} failures: incremental "
@@ -94,10 +112,13 @@ def main() -> int:
         print(f"[§7 engine] processed {le['n_processed']}, recovered {le['realized_recovered']}, "
               f"stops {le['stopped_reasons']}, dup-created-attempt={le['duplicate_replay_created_attempt']}")
     if diagnosis:
-        print(f"\n[§8 diagnosis] provider={diagnosis['provider']} "
-              f"accuracy_clear={diagnosis['accuracy_on_clear']} "
-              f"abstention_ambiguous={diagnosis['abstention_rate_on_ambiguous']} "
-              f"harmful_error_rate={diagnosis['harmful_error_rate']}")
+        print(f"\n[§8 diagnosis] measured_by={diagnosis['provider']} model={diagnosis['model']} "
+              f"completed={diagnosis['cohorts_completed']}/{diagnosis['cohorts_total']}"
+              f"{' (PARTIAL)' if diagnosis['partial_run'] else ''}")
+        print(f"  accuracy_clear={diagnosis['accuracy_on_clear']} "
+              f"abstention_ambiguous={diagnosis['abstention_rate_on_ambiguous']} (rewarded) "
+              f"harmful={diagnosis['harmful_error_rate']} parse_failure={diagnosis['parse_failure_rate']} "
+              f"tokens={diagnosis['total_input_tokens']}in/{diagnosis['total_output_tokens']}out")
 
     step("Summary")
     if FAILURES:

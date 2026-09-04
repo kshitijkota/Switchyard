@@ -1,0 +1,144 @@
+{
+  "adversarial_policy_true_value": 38974.3,
+  "eps_grid": [
+    0.0,
+    0.01,
+    0.03,
+    0.1
+  ],
+  "points": [
+    {
+      "epsilon": 0.0,
+      "estimation_error_adversarial": {
+        "ci": [
+          1286.6,
+          1918.9
+        ],
+        "error": 1609.0
+      },
+      "estimation_error_starved": {
+        "ci": [
+          -73.3,
+          630.8
+        ],
+        "error": 276.0
+      },
+      "exploration_cost_per_1k": {
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "value": 0.0
+      },
+      "explore_rate": 0.0,
+      "n_clipped": 0,
+      "true_policy_value": {
+        "ci": [
+          41103.3,
+          41803.4
+        ],
+        "value": 41454.1
+      }
+    },
+    {
+      "epsilon": 0.01,
+      "estimation_error_adversarial": {
+        "ci": [
+          988.5,
+          1620.9
+        ],
+        "error": 1311.0
+      },
+      "estimation_error_starved": {
+        "ci": [
+          -107.2,
+          596.9
+        ],
+        "error": 242.1
+      },
+      "exploration_cost_per_1k": {
+        "ci": [
+          14.7,
+          21.3
+        ],
+        "value": 18.0
+      },
+      "explore_rate": 0.01,
+      "n_clipped": 1325,
+      "true_policy_value": {
+        "ci": [
+          40999.0,
+          41701.7
+        ],
+        "value": 41351.8
+      }
+    },
+    {
+      "epsilon": 0.03,
+      "estimation_error_adversarial": {
+        "ci": [
+          980.1,
+          1612.4
+        ],
+        "error": 1302.5
+      },
+      "estimation_error_starved": {
+        "ci": [
+          -331.9,
+          372.1
+        ],
+        "error": 17.3
+      },
+      "exploration_cost_per_1k": {
+        "ci": [
+          40.0,
+          53.7
+        ],
+        "value": 46.6
+      },
+      "explore_rate": 0.0301,
+      "n_clipped": 4039,
+      "true_policy_value": {
+        "ci": [
+          40890.1,
+          41590.2
+        ],
+        "value": 41238.3
+      }
+    },
+    {
+      "epsilon": 0.1,
+      "estimation_error_adversarial": {
+        "ci": [
+          942.8,
+          1575.1
+        ],
+        "error": 1265.2
+      },
+      "estimation_error_starved": {
+        "ci": [
+          -603.2,
+          100.8
+        ],
+        "error": -254.0
+      },
+      "exploration_cost_per_1k": {
+        "ci": [
+          145.4,
+          168.1
+        ],
+        "value": 157.0
+      },
+      "explore_rate": 0.1003,
+      "n_clipped": 0,
+      "true_policy_value": {
+        "ci": [
+          40990.6,
+          41685.1
+        ],
+        "value": 41335.9
+      }
+    }
+  ],
+  "starved_policy_true_value": 41763.5
+}
