@@ -27,4 +27,15 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   each other and, with a busy timeout, serialises concurrent writers cleanly, so
   the 10-concurrent-identical-events test yields exactly one attempt. The store
   is the source of truth; no application-level lock is needed.
-- **Why the LLM is confined to diagnosis** — _to be written with step 9._
+- **Why the LLM is confined to diagnosis.** Routing decides where real money
+  goes, per transaction, at scale — it must be auditable, reproducible, and
+  bounded, which the estimator/policy stack is and a free-text model is not. The
+  LLM is given one contained, non-actuating job: read a cohort's failure-code
+  distribution and name a likely cause (or abstain). It never routes, its output
+  is schema-validated with an INSUFFICIENT_EVIDENCE fallback on any malformed
+  response, and its answers are cached by input hash so evaluation is
+  reproducible and cheap. Abstention is rewarded in scoring, so the model is
+  never pushed to guess. This keeps the LLM's failure modes off the money path.
+  (In this build environment no API key was available, so the reported numbers
+  come from the deterministic offline statistical diagnoser; the LLM path runs
+  and is scored identically when ANTHROPIC_API_KEY is set.)

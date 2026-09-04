@@ -1,0 +1,164 @@
+{
+  "abstained_on_clear": 1,
+  "abstention_rate_on_ambiguous": 0.667,
+  "accuracy_on_clear": 0.923,
+  "ambiguous_cohorts": 6,
+  "clear_cohorts": 13,
+  "detail": [
+    {
+      "cohort": "issuer_degraded cohort #1",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "ISSUER_DEGRADATION"
+    },
+    {
+      "cohort": "issuer_degraded cohort #2",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "ISSUER_DEGRADATION"
+    },
+    {
+      "cohort": "issuer_degraded cohort #3",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "ISSUER_DEGRADATION"
+    },
+    {
+      "cohort": "issuer_degraded cohort #4",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "ISSUER_DEGRADATION"
+    },
+    {
+      "cohort": "merchant_glitch cohort #1",
+      "confidence": 0.98,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "MERCHANT_INTEGRATION"
+    },
+    {
+      "cohort": "merchant_glitch cohort #2",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "MERCHANT_INTEGRATION"
+    },
+    {
+      "cohort": "merchant_glitch cohort #3",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "MERCHANT_INTEGRATION"
+    },
+    {
+      "cohort": "merchant_glitch cohort #4",
+      "confidence": 0.99,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "MERCHANT_INTEGRATION"
+    },
+    {
+      "cohort": "network_incident cohort #1",
+      "confidence": 0.98,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "NETWORK_TRANSIENT",
+      "true": "NETWORK_TRANSIENT"
+    },
+    {
+      "cohort": "baseline cohort #1",
+      "confidence": 0.61,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #2",
+      "confidence": 0.59,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #3",
+      "confidence": 0.56,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #4",
+      "confidence": 0.4,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "issuer_degraded tiny sample",
+      "confidence": 0.3,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "network_incident tiny sample",
+      "confidence": 0.3,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "merchant_glitch tiny sample",
+      "confidence": 0.3,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "baseline tiny sample",
+      "confidence": 0.3,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "network_incident+merchant_glitch even blend",
+      "confidence": 0.76,
+      "kind": "ambiguous",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "issuer_degraded+network_incident even blend",
+      "confidence": 0.81,
+      "kind": "ambiguous",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "INSUFFICIENT_EVIDENCE"
+    }
+  ],
+  "harmful_error_rate": 0.105,
+  "n_cohorts": 19,
+  "provider": "statistical"
+}

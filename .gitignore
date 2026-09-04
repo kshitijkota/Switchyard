@@ -16,3 +16,7 @@ venv/
 
 # Recovery audit trail — regenerated on every run
 /artifacts/audit.jsonl
+
+# Diagnosis response cache + incident log — regenerated per run/environment
+/diagnose/cache/*.json
+/diagnose/cache/*.log
