@@ -1,0 +1,1 @@
+{"_provider": "gemini", "_tokens": [350, 100], "cause": "ISSUER_DEGRADATION", "confidence": 0.93, "evidence": ["U30 (bank declined) accounts for 73.8% of cohort failures compared to 12.9% in baseline", "Substantial relative elevation of issuer declines pointing to issuer degradation", "Sample size of 80 failures is sufficient to identify concentrated anomaly"]}

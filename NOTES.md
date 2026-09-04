@@ -295,6 +295,46 @@ relabelled without re-running (RULE 5). This dated line is the single remaining
 reference to the old name (git history retains the earlier commits, which we do
 not rewrite). `grep -ri chowk .` (excluding `.git/`) returns only this entry.
 
+### 2026-09-05 — TASK 2: diagnosis run against a real model (Gemini)
+
+Added a Gemini adapter behind the existing provider interface (Anthropic path
+kept, OpenAI as a non-rate-limit fallback, offline statistical as the no-key
+default). Model `gemini-3.8-flash`, temperature 0, thinking disabled, strict
+JSON, schema-validated, cached by input hash (Gemini cache is committed so the
+numbers reproduce with no key).
+
+**Partial run — Gemini free-tier daily quota exhausted.** The free tier is
+`PerDayPerProjectPerModel` = **20 requests/day** for this model. Between the
+smoke test, diagnostics, and (early, before the fix) quota-burning retries, that
+cap was hit after **9 of 19 cohorts** completed — all of them CLEAR cohorts
+(they come first), **accuracy 1.0**, parse-failure 0.0, 3154 input / 847 output
+tokens. The 6 ambiguous cohorts (which test abstention) were NOT reached, so
+Gemini did not measure abstention. Per the task: STOPPED, did not switch to
+OpenAI, committed the cache so a future run (after the daily reset) resumes.
+
+Fix applied so a future fresh-quota run completes cleanly: a per-DAY 429
+(RESOURCE_EXHAUSTED / quota) now stops immediately instead of burning more of the
+cap on retries; only per-minute 429s and 5xx are retried. With ~1 request/cohort
+and 19 cohorts, that fits inside the 20/day cap.
+
+To still report abstention, `diagnose/evaluate.py` also emits an **offline
+statistical reference** (`artifacts/diagnose_results_statistical.json`),
+explicitly NOT a language-model number: accuracy 0.923, abstention 0.667 (all 19
+cohorts). The README attributes each number to its producer and never presents
+the offline scores as LLM performance.
+
+### 2026-09-05 — TASK 3: exploration price curve
+
+Swept ε ∈ {0, 0.01, 0.03, 0.10} (common traffic). Result
+(`artifacts/exploration_curve.{png,json}`): the starved-policy estimation error
+falls 276 → 242 → **17** → −254 ₹/1k, crossing honest (~0) at **ε≈0.03**, then
+OVER-correcting at 0.10; exploration cost rises 0 → 18 → 47 → 157 ₹/1k. The
+adversarial-trap error falls more slowly (1609 → 1265) — that policy is starved
+too deeply for ε≤0.10 to fully correct. Knee at ε≈0.03: near-zero error at
+modest cost; beyond it cost ~triples for no honesty gain (worse). True policy
+value stays ~flat (41.2–41.5k). Turns the earlier "epistemic-only" concession
+into a quantified curve with a stated knee.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not

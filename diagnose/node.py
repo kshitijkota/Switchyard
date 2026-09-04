@@ -11,9 +11,11 @@ Guarantees:
     validation failure the node falls back to INSUFFICIENT_EVIDENCE and logs the
     incident (never a wrong assertion from a broken response).
 
-Provider selection: the Anthropic LLM when a key + SDK are available, else a
-deterministic offline statistical diagnoser so the pipeline is always runnable
-and scoreable. Both obey the same contract.
+Provider selection (see diagnose/evaluate.py): Gemini is primary; the Anthropic
+path stays intact and selectable; OpenAI is a fallback only for a non-rate-limit
+Gemini failure; and a deterministic offline statistical diagnoser keeps the
+pipeline runnable when no key is present. A committed Gemini cache reproduces the
+Gemini numbers with no key at all. Keys are read from the environment only.
 """
 
 from __future__ import annotations
@@ -33,6 +35,51 @@ _ROOT = os.path.dirname(os.path.dirname(__file__))
 CACHE_DIR = os.path.join(_ROOT, "diagnose", "cache")
 INCIDENT_LOG = os.path.join(_ROOT, "diagnose", "cache", "incidents.log")
 LLM_MODEL = os.environ.get("SWITCHYARD_DIAGNOSE_MODEL", "claude-opus-5")
+
+
+# --- Control exceptions (propagate to the run loop; NOT per-call fallbacks) ------
+class RateLimitExhausted(Exception):
+    """A 429 that survived backoff — STOP the run, do not switch providers."""
+
+
+class ProviderUnavailable(Exception):
+    """A non-rate-limit failure (bad key, model unavailable) — a fallback provider
+    may be tried."""
+
+
+class SpendTripwire(Exception):
+    """Estimated third-party spend crossed a hard limit — STOP immediately."""
+
+
+class CacheMiss(Exception):
+    """Cache-only reproduce mode hit a cohort with no committed answer and no key —
+    the cohort is skipped so a cold clone reproduces exactly the committed set."""
+
+
+def load_env() -> None:
+    """Best-effort load of the repo-root .env (never overrides real env vars).
+    Keys are read from the environment only; nothing is printed or logged."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(os.path.join(_ROOT, ".env"), override=False)
+    except Exception:
+        pass
+
+
+# --- Config resolution (never trust a shared LLM_MODEL — see .env.example) -------
+def gemini_model() -> str:
+    return os.environ.get("GEMINI_MODEL") or os.environ.get("LLM_MODEL_gemini") or "gemini-3.8-flash"
+
+
+def openai_model() -> str:
+    return os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL_openai") or "gpt-4o-mini"
+
+
+def max_rpm() -> int:
+    try:
+        return int(os.environ.get("LLM_MAX_RPM", "60"))
+    except ValueError:
+        return 60
 
 
 @dataclass
@@ -70,6 +117,48 @@ def _validate(obj) -> dict | None:
         jsonschema.validate(obj, OUTPUT_SCHEMA)
         return obj
     except (jsonschema.ValidationError, TypeError):
+        return None
+
+
+def build_prompt(inp: "DiagnosisInput") -> str:
+    """Shared prompt for every LLM provider (Anthropic/Gemini/OpenAI)."""
+    meanings = "\n".join(f"  {c}: {CODE_MEANING[c][0]}" for c in sorted(CODE_MEANING))
+    return (
+        "You are a payments failure-diagnosis service. Given a cohort of failed "
+        "transactions (counts by failure code) and a baseline comparison, decide the "
+        "single most likely underlying CAUSE, or abstain.\n\n"
+        f"Failure code meanings:\n{meanings}\n\n"
+        f"Valid causes: {', '.join(VALID_OUTPUTS)}.\n"
+        "Return INSUFFICIENT_EVIDENCE when the cohort is small or no cause is clearly "
+        "elevated over baseline — abstaining is correct and rewarded, a wrong assertion "
+        "is not.\n\n"
+        f"Cohort: {inp.cohort_label} over {inp.window}\n"
+        f"Cohort failure counts: {json.dumps(inp.canonical()['cohort_counts'])}\n"
+        f"Baseline failure counts: {json.dumps(inp.canonical()['baseline_counts'])}\n\n"
+        'Respond with ONLY a JSON object: {"cause": <one of the valid causes>, '
+        '"confidence": <0..1>, "evidence": [<short strings>]}.'
+    )
+
+
+def _parse_json_lenient(text: str | None) -> dict | None:
+    if not text:
+        return None
+    t = text.strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t[:4].lower() == "json":
+            t = t[4:]
+        t = t.strip()
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        import re
+        m = re.search(r"\{.*\}", t, re.S)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except json.JSONDecodeError:
+                return None
         return None
 
 
@@ -120,54 +209,166 @@ class StatisticalProvider:
 
 class LLMProvider:
     """Anthropic LLM diagnoser. Structured output only. Requires credentials + SDK
-    (raises at construction otherwise, so the node falls back to statistical)."""
+    (raises at construction otherwise). Kept intact and selectable."""
 
-    name = "llm"
+    name = "anthropic"
 
     def __init__(self, model: str = LLM_MODEL):
         import anthropic  # raises if SDK missing
         self.client = anthropic.Anthropic()  # raises later if no credentials
         self.model = model
-
-    def _prompt(self, inp: DiagnosisInput) -> str:
-        meanings = "\n".join(f"  {c}: {CODE_MEANING[c][0]}" for c in sorted(CODE_MEANING))
-        return (
-            "You are a payments failure-diagnosis service. Given a cohort of failed "
-            "transactions (counts by failure code) and a baseline comparison, decide the "
-            "single most likely underlying CAUSE, or abstain.\n\n"
-            f"Failure code meanings:\n{meanings}\n\n"
-            f"Valid causes: {', '.join(VALID_OUTPUTS)}.\n"
-            "Return INSUFFICIENT_EVIDENCE when the cohort is small or no cause is clearly "
-            "elevated over baseline — abstaining is correct and rewarded, a wrong assertion "
-            "is not.\n\n"
-            f"Cohort: {inp.cohort_label} over {inp.window}\n"
-            f"Cohort failure counts: {json.dumps(inp.canonical()['cohort_counts'])}\n"
-            f"Baseline failure counts: {json.dumps(inp.canonical()['baseline_counts'])}\n\n"
-            'Respond with ONLY a JSON object: {"cause": <one of the valid causes>, '
-            '"confidence": <0..1>, "evidence": [<short strings>]}.'
-        )
+        self.last_in = self.last_out = 0
+        self.total_in = self.total_out = 0
 
     def diagnose(self, inp: DiagnosisInput) -> dict | None:
-        resp = self.client.messages.create(
-            model=self.model, max_tokens=1024,
-            output_config={"effort": "low"},
-            messages=[{"role": "user", "content": self._prompt(inp)}],
-        )
-        text = "".join(b.text for b in resp.content if b.type == "text").strip()
-        # tolerate code fences
-        if text.startswith("```"):
-            text = text.strip("`").split("\n", 1)[-1]
         try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            return None  # node will validate/fallback and log
+            resp = self.client.messages.create(
+                model=self.model, max_tokens=1024,
+                output_config={"effort": "low"},
+                messages=[{"role": "user", "content": build_prompt(inp)}],
+            )
+        except Exception as e:  # noqa: BLE001
+            raise ProviderUnavailable(f"anthropic: {type(e).__name__}: {e}")
+        u = getattr(resp, "usage", None)
+        self.last_in = int(getattr(u, "input_tokens", 0) or 0)
+        self.last_out = int(getattr(u, "output_tokens", 0) or 0)
+        self.total_in += self.last_in; self.total_out += self.last_out
+        text = "".join(b.text for b in resp.content if b.type == "text")
+        return _parse_json_lenient(text)
+
+
+class GeminiProvider:
+    """Primary provider (AGENT_BRIEF-final PROVIDER CONFIGURATION). Gemini flash,
+    temperature 0, thinking disabled (five-way classification — thinking tokens
+    would be billed for no benefit), strict JSON. Backs off on 429 and raises
+    RateLimitExhausted if the quota is truly gone (the run then stops)."""
+
+    name = "gemini"
+
+    def __init__(self, model: str, api_key: str, rpm: int = 60):
+        from google import genai
+        from google.genai import errors, types
+        self._types = types
+        self._errors = errors
+        self.client = genai.Client(api_key=api_key)
+        self.model = model
+        self._min_interval = 60.0 / max(1, rpm)
+        self._last_ts = 0.0
+        self._thinking_ok = True
+        self.last_in = self.last_out = 0
+        self.total_in = self.total_out = 0
+
+    def _throttle(self) -> None:
+        import time
+        dt = time.time() - self._last_ts
+        if dt < self._min_interval:
+            time.sleep(self._min_interval - dt)
+        self._last_ts = time.time()
+
+    def diagnose(self, inp: DiagnosisInput) -> dict | None:
+        import random
+        import time
+        prompt = build_prompt(inp)
+        for attempt in range(6):
+            self._throttle()
+            try:
+                cfg = dict(
+                    temperature=0.0, response_mime_type="application/json",
+                    automatic_function_calling=self._types.AutomaticFunctionCallingConfig(disable=True),
+                )
+                if self._thinking_ok:
+                    cfg["thinking_config"] = self._types.ThinkingConfig(thinking_budget=0)
+                resp = self.client.models.generate_content(
+                    model=self.model, contents=prompt,
+                    config=self._types.GenerateContentConfig(**cfg))
+            except self._errors.APIError as e:
+                code = getattr(e, "code", None)
+                msg = str(e).lower()
+                if code in (500, 502, 503, 504):        # transient server — retry
+                    time.sleep(min(60.0, 2 ** attempt) + random.uniform(0, 1))
+                    continue
+                if code == 429:
+                    # A per-MINUTE cap resets quickly, so back off and retry. A
+                    # per-DAY / project quota will NOT reset for hours — retrying
+                    # only burns more of it, so stop immediately (partial run;
+                    # the committed cache resumes next time). Never switch to OpenAI.
+                    if "perminute" in msg or "per minute" in msg:
+                        time.sleep(min(60.0, 2 ** attempt) + random.uniform(0, 1))
+                        continue
+                    raise RateLimitExhausted(f"gemini quota exhausted (per-day/project): {e}")
+                if self._thinking_ok and "thinking" in msg:
+                    self._thinking_ok = False
+                    continue
+                # Permanent (bad key / model unavailable / bad request) — a fallback
+                # provider may be tried.
+                raise ProviderUnavailable(f"gemini {code}: {e}")
+            except Exception as e:  # noqa: BLE001
+                raise ProviderUnavailable(f"gemini: {type(e).__name__}: {e}")
+            um = resp.usage_metadata
+            self.last_in = int(getattr(um, "prompt_token_count", 0) or 0)
+            self.last_out = (int(getattr(um, "candidates_token_count", 0) or 0)
+                             + int(getattr(um, "thoughts_token_count", 0) or 0))
+            self.total_in += self.last_in; self.total_out += self.last_out
+            return _parse_json_lenient(getattr(resp, "text", None))
+        raise RateLimitExhausted("gemini unavailable (429/5xx) after 6 backoff attempts")
+
+
+class OpenAIProvider:
+    """Fallback ONLY when Gemini fails for a non-rate-limit reason. Third-party key
+    — minimum necessary, hard spend tripwire at $2 (halt well below the $25 cap)."""
+
+    name = "openai"
+    _PRICE = {"gpt-4o-mini": (0.15 / 1_000_000, 0.60 / 1_000_000)}
+    TRIPWIRE_USD = 2.0
+    HARD_CAP_USD = 25.0
+
+    def __init__(self, model: str, api_key: str):
+        import openai
+        self._openai = openai
+        self.client = openai.OpenAI(api_key=api_key)
+        self.model = model
+        self.last_in = self.last_out = 0
+        self.total_in = self.total_out = 0
+        self.spend_usd = 0.0
+
+    def diagnose(self, inp: DiagnosisInput) -> dict | None:
+        if self.spend_usd > self.TRIPWIRE_USD:
+            raise SpendTripwire(f"estimated spend ${self.spend_usd:.4f} > ${self.TRIPWIRE_USD}")
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model, temperature=0,
+                response_format={"type": "json_object"},
+                messages=[{"role": "user", "content": build_prompt(inp)}])
+        except self._openai.RateLimitError as e:
+            raise RateLimitExhausted(f"openai 429: {e}")
+        except Exception as e:  # noqa: BLE001
+            raise ProviderUnavailable(f"openai: {type(e).__name__}: {e}")
+        u = resp.usage
+        self.last_in = int(u.prompt_tokens); self.last_out = int(u.completion_tokens)
+        self.total_in += self.last_in; self.total_out += self.last_out
+        pin, pout = self._PRICE.get(self.model, (0.15 / 1e6, 0.60 / 1e6))
+        self.spend_usd += self.last_in * pin + self.last_out * pout
+        if self.spend_usd > self.HARD_CAP_USD:
+            raise SpendTripwire(f"hard cap ${self.HARD_CAP_USD} reached")
+        return _parse_json_lenient(resp.choices[0].message.content)
 
 
 class Diagnoser:
-    def __init__(self, provider=None, cache_dir: str = CACHE_DIR):
+    """Caches by (namespace, input hash). `provider=None` with an explicit
+    cache_namespace is CACHE-ONLY reproduce mode — it serves committed answers
+    without a key and fails over to INSUFFICIENT_EVIDENCE on a miss. Control
+    exceptions (rate limit / provider unavailable / spend tripwire) PROPAGATE to
+    the run loop; only malformed responses fall back per-call."""
+
+    def __init__(self, provider=None, cache_dir: str = CACHE_DIR, cache_namespace: str | None = None):
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
-        self.provider = provider or self._auto_provider()
+        if provider is None and cache_namespace is None:
+            provider = self._auto_provider()
+        self.provider = provider
+        self.cache_namespace = cache_namespace or (provider.name if provider else "unknown")
+        self.parse_failures = 0
+        self.cache_misses_without_provider = 0
 
     @staticmethod
     def _auto_provider():
@@ -177,9 +378,7 @@ class Diagnoser:
             return StatisticalProvider()
 
     def _cache_path(self, h: str) -> str:
-        # Namespace by provider so a statistical-provider cache never shadows the
-        # LLM path (and vice versa) when a key becomes available.
-        return os.path.join(self.cache_dir, f"{self.provider.name}_{h}.json")
+        return os.path.join(self.cache_dir, f"{self.cache_namespace}_{h}.json")
 
     def diagnose(self, inp: DiagnosisInput, use_cache: bool = True) -> dict:
         h = inp.hash()
@@ -188,18 +387,20 @@ class Diagnoser:
             with open(path) as fh:
                 return json.load(fh)
 
-        try:
-            raw = self.provider.diagnose(inp)
-        except Exception as e:  # any provider/API failure
-            _log_incident(h, f"provider_error:{type(e).__name__}")
-            raw = _fallback(f"provider_error:{type(e).__name__}")
+        if self.provider is None:  # cache-only reproduce mode, and a miss
+            self.cache_misses_without_provider += 1
+            raise CacheMiss(h)   # caller skips it; nothing is cached (no fake answer)
+        else:
+            raw = self.provider.diagnose(inp)   # control exceptions propagate
+            result = _validate(raw)
+            if result is None:
+                self.parse_failures += 1
+                _log_incident(h, "schema_validation_failed", json.dumps(raw) if raw else "")
+                result = _fallback("schema_validation_failed")
+            tokens = [int(getattr(self.provider, "last_in", 0)), int(getattr(self.provider, "last_out", 0))]
 
-        result = _validate(raw)
-        if result is None:
-            _log_incident(h, "schema_validation_failed", json.dumps(raw) if raw else "")
-            result = _fallback("schema_validation_failed")
-
-        result["_provider"] = self.provider.name
+        result["_provider"] = self.cache_namespace
+        result["_tokens"] = tokens
         with open(path, "w") as fh:
             json.dump(result, fh, sort_keys=True)
         return result
