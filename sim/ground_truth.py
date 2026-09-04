@@ -182,11 +182,13 @@ def success_prob_batch(
     hours: np.ndarray,
     day_indices: np.ndarray,
     processor: str,
+    degrade_residues: tuple = (2, 5),
 ) -> np.ndarray:
     """Vectorised success_prob for a whole batch routed to one processor.
 
-    Must return exactly what success_prob() returns element-wise (a test checks
-    this against the scalar path).
+    With the default degrade_residues=(2,5) it returns exactly what
+    success_prob() returns element-wise (a test checks this). The held-out regime
+    passes a DIFFERENT degradation schedule.
     """
     n = len(methods)
     p = np.empty(n, dtype=np.float64)
@@ -196,7 +198,7 @@ def success_prob_batch(
         p[(issuers == "hdfc") & (methods == "upi")] += 0.07
         degr = (
             (issuers == "sbi") & (methods == "upi") & (hours >= 14) & (hours <= 18)
-            & np.isin(np.mod(day_indices, 7), (2, 5))
+            & np.isin(np.mod(day_indices, 7), degrade_residues)
         )
         p[degr] -= 0.15
         p[amounts > _HIGH_AMOUNT_PAISE] -= 0.18                 # starved: pa on large

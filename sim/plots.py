@@ -131,5 +131,36 @@ def make_crossover_plot(out_png: str | None = None, out_json: str | None = None)
     return summary
 
 
+def make_extrapolation_plot(evidence: dict, out_png: str | None = None) -> str:
+    """Plot direct's predicted vs TRUE pa success across ticket sizes (the
+    extrapolation failure). `evidence` is eval.harness.pa_extrapolation_evidence
+    output — no model needed here, so this stays a pure plotter."""
+    out_png = out_png or os.path.join(_ARTIFACTS, "extrapolation.png")
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    rows = evidence["rows"]
+    amt = [r["amount_rupees"] for r in rows]
+    pred = [r["predicted_pa_success"] for r in rows]
+    true = [r["true_pa_success"] for r in rows]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(amt, pred, "o-", color="#c65a2e", lw=2, label="direct model's predicted pa success")
+    ax.plot(amt, true, "s--", color="#2f6db3", lw=2, label="TRUE pa success")
+    ax.axvline(5000, color="#888", ls=":", lw=1)
+    ax.annotate("legacy sends >₹5k to pb\n(pa never observed here)", xy=(5000, 0.72),
+                xytext=(7000, 0.60), fontsize=9, color="#333",
+                arrowprops=dict(arrowstyle="->", color="#888"))
+    ax.set_xscale("log")
+    ax.set_xlabel("Ticket size (₹, log scale)")
+    ax.set_ylabel("pa success probability")
+    ax.set_title("‘You cannot learn what you never tried’ — pa on large tickets (card × hdfc)")
+    ax.legend(loc="lower left")
+    ax.grid(True, alpha=0.25)
+    ax.set_ylim(0.5, 1.0)
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=110, metadata={"Software": "chowk"})
+    plt.close(fig)
+    return out_png
+
+
 if __name__ == "__main__":
     print(json.dumps(make_crossover_plot(), indent=2))

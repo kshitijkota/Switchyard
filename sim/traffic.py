@@ -33,6 +33,16 @@ _AMOUNT_CAP = 20_000_000                # ₹200,000
 _METHOD_P = np.array([0.65, 0.25, 0.10])          # upi / card / netbanking
 _ISSUER_P = np.array([0.24, 0.19, 0.19, 0.19, 0.19])  # hdfc heavier
 
+# Traffic profiles. "main" reproduces the frozen distribution exactly (same draws,
+# same order → byte-identical logs). "heldout" is a deliberately DIFFERENT mix
+# (more card, uniform issuers, fatter tail, fewer days) evaluated exactly once.
+_PROFILES = {
+    "main": {"method_p": _METHOD_P, "issuer_p": _ISSUER_P, "sigma": 1.25, "num_days": 28},
+    "heldout": {"method_p": np.array([0.50, 0.35, 0.15]),
+                "issuer_p": np.array([0.20, 0.20, 0.20, 0.20, 0.20]),
+                "sigma": 1.45, "num_days": 21},
+}
+
 # Diurnal hour weights (index = hour). Twin peaks at 11–14 and 19–22.
 _HOUR_W = np.array([
     0.20, 0.15, 0.10, 0.10, 0.15, 0.25, 0.50, 0.80, 1.20, 1.60, 1.90, 2.40,
@@ -62,13 +72,16 @@ class TrafficArrays:
 
 
 def generate_traffic_arrays(
-    n: int, seed: int, prefix: str = "txn_", num_days: int = DEFAULT_NUM_DAYS
+    n: int, seed: int, prefix: str = "txn_", num_days: int | None = None, profile: str = "main"
 ) -> TrafficArrays:
+    cfg = _PROFILES[profile]
+    if num_days is None:
+        num_days = cfg["num_days"]
     rng = np.random.default_rng(seed)
-    methods = np.array(METHODS)[rng.choice(len(METHODS), size=n, p=_METHOD_P)]
-    issuers = np.array(ISSUERS)[rng.choice(len(ISSUERS), size=n, p=_ISSUER_P)]
+    methods = np.array(METHODS)[rng.choice(len(METHODS), size=n, p=cfg["method_p"])]
+    issuers = np.array(ISSUERS)[rng.choice(len(ISSUERS), size=n, p=cfg["issuer_p"])]
 
-    raw = rng.lognormal(mean=_MU, sigma=_SIGMA, size=n)
+    raw = rng.lognormal(mean=_MU, sigma=cfg["sigma"], size=n)
     amounts = np.rint(raw).astype(np.int64)
     amounts = np.clip(amounts, _AMOUNT_FLOOR, _AMOUNT_CAP)
 

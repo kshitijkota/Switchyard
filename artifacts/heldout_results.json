@@ -1,0 +1,119 @@
+{
+  "adversarial_honesty": {
+    "estimators": {
+      "chowk": {
+        "coverage": 1.0,
+        "error": -8292.9,
+        "estimate": 40276.8
+      },
+      "direct": {
+        "coverage": 1.0,
+        "error": -7641.2,
+        "estimate": 40928.5
+      },
+      "dr": {
+        "coverage": 1.0,
+        "error": -7988.9,
+        "estimate": 40580.8
+      },
+      "ips": {
+        "coverage": 1.0,
+        "error": -8406.9,
+        "estimate": 40162.8
+      },
+      "snips": {
+        "coverage": 1.0,
+        "error": -8316.9,
+        "estimate": 40252.8
+      }
+    },
+    "target_policy": "adversarial all-large\u2192pa on held-out traffic",
+    "true_value": 48569.7
+  },
+  "legacy_baseline_value": 51312.3,
+  "ope_honesty": {
+    "estimators": {
+      "chowk": {
+        "coverage": 1.0,
+        "error": -11735.3,
+        "estimate": 41780.8
+      },
+      "direct": {
+        "coverage": 1.0,
+        "error": -11106.0,
+        "estimate": 42410.0
+      },
+      "dr": {
+        "coverage": 1.0,
+        "error": -11493.7,
+        "estimate": 42022.4
+      },
+      "ips": {
+        "coverage": 0.9991,
+        "error": -13853.2,
+        "estimate": 39662.8
+      },
+      "snips": {
+        "coverage": 0.9991,
+        "error": -12891.1,
+        "estimate": 40625.0
+      }
+    },
+    "target_policy": "direct-greedy on held-out traffic",
+    "true_value": 53516.1
+  },
+  "oracle_value": 54074.9,
+  "regime": {
+    "degrade_residues": [
+      1,
+      4
+    ],
+    "n_eval_txns": 200000,
+    "seeds": [
+      9000,
+      9001,
+      9002,
+      9003,
+      9004,
+      9005,
+      9006,
+      9007,
+      9008,
+      9009
+    ],
+    "traffic_profile": "heldout"
+  },
+  "results_table": [
+    {
+      "estimated_value_main": 42410.0,
+      "estimation_error": -11106.0,
+      "method": "direct",
+      "true_value_heldout": 53516.1
+    },
+    {
+      "estimated_value_main": 42994.3,
+      "estimation_error": -8259.5,
+      "method": "ips",
+      "true_value_heldout": 51253.8
+    },
+    {
+      "estimated_value_main": 43070.3,
+      "estimation_error": -8354.4,
+      "method": "snips",
+      "true_value_heldout": 51424.7
+    },
+    {
+      "estimated_value_main": 42986.6,
+      "estimation_error": -9298.4,
+      "method": "dr",
+      "true_value_heldout": 52285.1
+    },
+    {
+      "estimated_value_main": 42180.4,
+      "estimation_error": -10595.7,
+      "method": "chowk",
+      "true_value_heldout": 52776.2
+    }
+  ],
+  "run_timestamp": "2026-09-04T19:50:31"
+}

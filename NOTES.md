@@ -247,6 +247,46 @@ primarily this honesty (OPE), plus a modest, real policy gain over the other
 off-policy methods; a thicker budget would be needed to fully resolve the deepest
 starved cells. This will be stated plainly in the README (no overselling).
 
+### 2026-09-04 19:50 IST — HELD-OUT REGIME, run exactly once (§6.1, RULE 5)
+
+Run timestamp (from the script): **2026-09-04T19:50:31**. Results frozen in
+`artifacts/heldout_results.json`; `eval/heldout.py` refuses to re-run while that
+file exists. The four methods were NOT retrained — they keep the policies and
+self-estimates learned on the main regime; only TRUE value is re-measured.
+
+Held-out regime = different traffic mix (50/35/15 method split, uniform issuers,
+σ=1.45 fatter tail, 21 days) + different degradation schedule (day%7 ∈ {1,4}).
+Legacy baseline 51312, oracle 54075 ₹/1k (higher scale — fatter tail ⇒ bigger
+tickets). True values (policy applied to held-out traffic):
+- direct 53516 · **chowk 52776** · dr 52285 · snips 51424 · ips 51253.
+
+**Finding: the policy-quality ordering is preserved** — direct > chowk > dr >
+snips > ips, exactly as on the main regime. chowk still beats every off-policy
+method and tracks direct under a materially different regime; the learned
+policies generalise.
+
+Caveat (reported, not smoothed): the main-calibrated *self-estimates* (~42k) do
+not transfer to the held-out value scale (~52k) — every method under-states
+held-out truth by ₹8–11k/1k. That is the regime's value-scale shift, not a
+coverage effect; a like-for-like honesty comparison would need held-out logs,
+which RULE 5 forbids us from collecting. So the held-out is a policy-generalisation
+check, and it passes.
+
+### 2026-09-04 20:15 IST — Final pass
+
+- Full `verify.py` runs green (~1 min): tests + regenerate + reprint all numbers.
+- All README numbers trace to `artifacts/results.json`, `diagnose_results.json`,
+  `crossover.json`, `heldout_results.json`, and the recovery evaluation — none
+  hand-written (RULE 1).
+- Honest summary of the headline: the naive supervised model is a *strong*
+  policy on smooth structure; its danger is epistemic (it can't tell a good
+  policy from a bad one in the unexplored region, and over-values policies that
+  venture there). chowk's 3% budget buys that honesty (OPE error +17 vs direct
+  +647) and a modest, real policy gain over the other off-policy methods.
+  Reported with all caveats in the README's limitations.
+
 ### Open questions
 
-- None blocking yet.
+- None outstanding. The one design tension (§4.2/§5 as literally written do not
+  by themselves produce the direct-fails headline) is resolved and fully
+  documented above and in the README limitations.

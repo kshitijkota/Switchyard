@@ -40,15 +40,17 @@ EVAL_SEEDS = list(range(2000, 2010))   # 10 seeds, common across methods
 EVAL_N_PER_SEED = 20_000
 
 
-def build_eval_matrices(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED):
+def build_eval_matrices(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED,
+                        profile: str = "main", degrade_residues=(2, 5)):
     """Return (cell_idx, exp_reward, legacy_pertxn) over the pooled eval traffic.
 
     exp_reward[i, p] = true expected net reward (paise) of routing txn i to
     processor p = success_prob(x_i, p) * reward_if_success(p, amount_i).
+    `profile`/`degrade_residues` select the held-out regime when needed.
     """
     ms, iss, amt, hr, day = [], [], [], [], []
     for s in seeds:
-        ta = generate_traffic_arrays(n_per_seed, seed=s, prefix=f"ev{s}_")
+        ta = generate_traffic_arrays(n_per_seed, seed=s, prefix=f"ev{s}_", profile=profile)
         ms.append(ta.methods); iss.append(ta.issuers); amt.append(ta.amounts)
         hr.append(ta.hours); day.append(ta.day_indices)
     methods = np.concatenate(ms); issuers = np.concatenate(iss)
@@ -58,7 +60,7 @@ def build_eval_matrices(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED):
     from sim.ground_truth import success_prob_batch
     exp_reward = np.empty((n, len(PROCESSORS)), dtype=np.float64)
     for p, proc in enumerate(PROCESSORS):
-        sp = success_prob_batch(methods, issuers, amounts, hours, days, proc)
+        sp = success_prob_batch(methods, issuers, amounts, hours, days, proc, degrade_residues=degrade_residues)
         exp_reward[:, p] = sp * ec.reward_if_success_paise_vec(proc, amounts).astype(np.float64)
 
     # cell index per eval txn
@@ -218,6 +220,13 @@ def exploration_accounting(methods: dict, explore_path: str, aux_path: str) -> d
 
 # --- Orchestration --------------------------------------------------------------
 
+def _pa_extrapolation_with_plot(methods) -> dict:
+    from sim.plots import make_extrapolation_plot
+    ev = pa_extrapolation_evidence(methods, os.path.join(_ROOT, "artifacts", "extrapolation.json"))
+    make_extrapolation_plot(ev)
+    return ev
+
+
 def run_evaluation(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED) -> dict:
     legacy_ds, explore_ds = load_datasets()
     methods = build_all(legacy_ds, explore_ds)
@@ -261,8 +270,7 @@ def run_evaluation(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED) -> dict:
             methods, all_large_to_pa_policy(methods["direct"].policy_idx),
             "adversarial: ALL large tickets → pa (the trap)", cell_idx, exp_reward),
         "segment_table": segment_table(methods, cell_idx, exp_reward),
-        "pa_extrapolation": pa_extrapolation_evidence(
-            methods, os.path.join(_ROOT, "artifacts", "extrapolation.json")),
+        "pa_extrapolation": _pa_extrapolation_with_plot(methods),
         "exploration_accounting": exploration_accounting(
             methods, os.path.join(_ROOT, "data", "explore.jsonl"),
             os.path.join(_ROOT, "data", "explore_aux.jsonl")),
