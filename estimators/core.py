@@ -1,7 +1,7 @@
 """Shared estimator core — AGENT_BRIEF §6.
 
 All four methods estimate an expected-reward value V(cell, processor), then route
-by per-cell argmax. They differ ONLY in the estimator (and, for chowk, the data):
+by per-cell argmax. They differ ONLY in the estimator (and, for switchyard, the data):
 
   direct : model plug-in    V = mean_i∈c  q̂(x_i, p)                 [GBM only]
   ips    : inverse propensity V = mean_i∈c  1(a_i=p)/μ_i · r_i
@@ -9,7 +9,7 @@ by per-cell argmax. They differ ONLY in the estimator (and, for chowk, the data)
   dr     : doubly robust      V = direct + mean_i∈c 1(a_i=p)/μ_i·(r_i − q̂(x_i,p))
 
 Because DR's correction term is zero wherever an action was never logged in a
-cell, DR *collapses to direct* in starved cells — which is exactly why chowk's
+cell, DR *collapses to direct* in starved cells — which is exactly why switchyard's
 ε-exploration (restoring coverage) is what lets the correction actually fire.
 
 This module imports economics (a public fee schedule) but NEVER
@@ -113,7 +113,7 @@ def _proc_onehot(n: int, p: int) -> np.ndarray:
 
 class QModel:
     """GBM classifier for P(success | context, processor), turned into expected
-    net reward via the public fee schedule. Shared by direct, dr and chowk."""
+    net reward via the public fee schedule. Shared by direct, dr and switchyard."""
 
     def __init__(self, random_state: int = 0):
         self.clf = HistGradientBoostingClassifier(
@@ -276,7 +276,7 @@ class Method:
     def expected_reward_for(self, context) -> np.ndarray:
         """Per-processor expected net reward (paise) for one context — the routing
         brain used by the recovery loop. Uses the Q-model when present (direct/dr/
-        chowk); otherwise falls back to this method's per-cell value table."""
+        switchyard); otherwise falls back to this method's per-cell value table."""
         if self._qmodel is not None:
             return self._qmodel.expected_reward_for(context)
         ci = CELL_INDEX[cell_of(context.method, context.issuer, context.amount_paise)]

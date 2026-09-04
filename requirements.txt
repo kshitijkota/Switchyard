@@ -1,4 +1,4 @@
-# Chowk — minimal runtime + dev dependencies.
+# Switchyard — minimal runtime + dev dependencies.
 # scipy is pulled in transitively by scikit-learn.
 numpy>=1.26
 scikit-learn>=1.3

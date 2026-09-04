@@ -158,7 +158,7 @@ def evaluate_policy_honesty(methods: dict, target: np.ndarray, label: str,
 def all_large_to_pa_policy(base_policy: np.ndarray) -> np.ndarray:
     """An adversarial policy: take the direct policy but dump ALL large tickets on
     pa — exactly the trap direct's own model walks into. direct will value this
-    highly (it thinks pa is great on large); chowk, having explored, will not."""
+    highly (it thinks pa is great on large); switchyard, having explored, will not."""
     pol = base_policy.copy()
     pa = PROC_INDEX["pa"]
     for c, cell in enumerate(ALL_CELLS):
@@ -181,11 +181,11 @@ def naive_success_policy(qmodel) -> np.ndarray:
 # --- Exploration accounting (§6.2) ----------------------------------------------
 
 def exploration_accounting(methods: dict, explore_path: str, aux_path: str) -> dict:
-    """Rupee cost of the 3% randomly-routed slice: what the greedy (chowk) policy
+    """Rupee cost of the 3% randomly-routed slice: what the greedy (switchyard) policy
     would have earned on those txns minus what random routing actually earned
     (expected reward, ground truth)."""
     from events import read_jsonl
-    chowk = methods["chowk"]
+    switchyard = methods["switchyard"]
     aux = {}
     with open(aux_path) as fh:
         for line in fh:
@@ -198,7 +198,7 @@ def exploration_accounting(methods: dict, explore_path: str, aux_path: str) -> d
     for ev in read_jsonl(explore_path):
         ctx = ev.context
         n_total += 1
-        greedy_proc = chowk.recommend(ctx)
+        greedy_proc = switchyard.recommend(ctx)
         total_reward_defensible += success_prob(ctx, greedy_proc) * ec.reward_if_success_paise(greedy_proc, ctx.amount_paise)
         if aux[ctx.txn_id]["was_explore"]:
             n_explore += 1

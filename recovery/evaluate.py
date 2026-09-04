@@ -43,8 +43,8 @@ def _true_expected(context, proc):
     return success_prob(context, proc) * ec.reward_if_success_paise(proc, context.amount_paise)
 
 
-def chowk_best_retry_expected(context, failed_proc, failed_code, method) -> float:
-    """Expected recovered reward (paise) of chowk's best single re-attempt."""
+def switchyard_best_retry_expected(context, failed_proc, failed_code, method) -> float:
+    """Expected recovered reward (paise) of switchyard's best single re-attempt."""
     if failed_code in HARD_DECLINE_CODES:
         return 0.0
     er = method.expected_reward_for(context)  # model estimate (no ground truth)
@@ -69,16 +69,16 @@ def legacy_retry_expected(context, failed_code) -> float:
 
 
 def money_recovered(method, failures, seed: int = 0) -> dict:
-    chowk = np.array([chowk_best_retry_expected(c, fp, fc, method) for c, fp, fc in failures])
+    switchyard = np.array([switchyard_best_retry_expected(c, fp, fc, method) for c, fp, fc in failures])
     legacy = np.array([legacy_retry_expected(c, fc) for c, fp, fc in failures])
-    incr = chowk - legacy
+    incr = switchyard - legacy
     n = len(failures)
     rng = np.random.default_rng(seed)
     boot = np.array([incr[rng.integers(0, n, n)].mean() for _ in range(1000)])
     lo, hi = np.percentile(boot, [2.5, 97.5])
     return {
         "n_failures": n,
-        "chowk_expected_recovered_rupees": round(float(chowk.sum()) / 100, 2),
+        "switchyard_expected_recovered_rupees": round(float(switchyard.sum()) / 100, 2),
         "legacy_expected_recovered_rupees": round(float(legacy.sum()) / 100, 2),
         "incremental_per_failure_paise": round(float(incr.mean()), 2),
         "incremental_total_rupees": round(float(incr.sum()) / 100, 2),
@@ -122,7 +122,7 @@ def run_live_engine(method, failures, seed: int = 0) -> dict:
 
 def evaluate() -> dict:
     legacy_ds, explore_ds = load_datasets()
-    method = build_all(legacy_ds, explore_ds)["chowk"]
+    method = build_all(legacy_ds, explore_ds)["switchyard"]
     failures = load_failures()
     return {
         "money_recovered": money_recovered(method, failures),

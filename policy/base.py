@@ -27,7 +27,7 @@ class LoggingPolicy(Protocol):
 
 @runtime_checkable
 class RoutingMethod(Protocol):
-    """The common interface for the four learned methods (direct/ips/dr/chowk).
+    """The common interface for the four learned methods (direct/ips/dr/switchyard).
 
     - fit() learns from logged events.
     - recommend() returns the chosen processor for a context (the policy).

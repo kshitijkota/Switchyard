@@ -5,7 +5,7 @@ a DIFFERENT degradation schedule (day%7 ∈ {1,4} instead of {2,5}). The four
 methods are NOT retrained — they keep the policies and self-estimates learned on
 the main regime; we only re-measure TRUE value here. Run exactly once.
 
-This is a robustness check: does chowk's honesty advantage survive a regime shift?
+This is a robustness check: does switchyard's honesty advantage survive a regime shift?
 """
 
 from __future__ import annotations

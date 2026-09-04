@@ -11,8 +11,8 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   model's prediction and only adds an IPW correction on the *residual*, so where
   there is no coverage the correction is zero and DR falls back to the model
   instead of exploding. DR is unbiased if EITHER the model or the propensities
-  are right, and materially lower-variance than IPS — the right base for chowk.
-- **Why weight clipping at 50.** chowk's data includes the ε-exploration slice
+  are right, and materially lower-variance than IPS — the right base for switchyard.
+- **Why weight clipping at 50.** switchyard's data includes the ε-exploration slice
   whose minimum propensity is 0.01, i.e. importance weights up to 100. A handful
   of such samples would otherwise dominate a cell's estimate. Clipping weights at
   50 caps any single sample's leverage (trading a small downward bias for a large

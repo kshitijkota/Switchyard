@@ -7,7 +7,7 @@ here as it happens (AGENT_BRIEF §11, §12.4).
 
 ### 2026-09-04 18:25 IST — Project setup
 
-- The project is named **Chowk** in the brief; the git repository is
+- The project is named **Switchyard** in the brief; the git repository is
   **Switchyard** (remote `origin` = github.com/kshitijkota/Switchyard.git,
   fresh `main`, no commits). Decision: build the whole project inside the
   Switchyard repo and commit to `main`. `AGENT_BRIEF.md` lives one directory up
@@ -19,7 +19,7 @@ here as it happens (AGENT_BRIEF §11, §12.4).
 
 ### 2026-09-04 18:25 IST — Architecture interpretation (estimators & policies)
 
-The brief describes `ips`/`dr`/`chowk` mostly as value *estimators* but also
+The brief describes `ips`/`dr`/`switchyard` mostly as value *estimators* but also
 requires all four to be *policies* with a `recommend()` and an "estimated value"
 row. Interpretation chosen (recorded because it shapes §6):
 
@@ -36,7 +36,7 @@ row. Interpretation chosen (recorded because it shapes §6):
 
 ### 2026-09-04 18:25 IST — Hypothesis for HOW `direct` fails (to verify, not assume)
 
-The brief asserts `direct` should pick wrong on `hdfc × upi` and `chowk` right,
+The brief asserts `direct` should pick wrong on `hdfc × upi` and `switchyard` right,
 and explicitly allows that this may need tuning of effect sizes/coverage — with
 every tuning pass logged here (§6.1, §12.4). My working hypothesis before seeing
 any number:
@@ -48,7 +48,7 @@ any number:
   flat fee dominates and `pb`/`pc` can be the truly better choice (the crossover).
 - The legacy policy almost never sends upi to `pb` (0.03), so `direct` has little
   evidence about `pb` on upi and extrapolates — "you cannot learn what you never
-  tried." `chowk`'s ε-exploration slice restores that coverage.
+  tried." `switchyard`'s ε-exploration slice restores that coverage.
 
 I will BUILD the machinery honestly, then RUN it and report whatever actually
 happens. If the headline does not reproduce it will be tuned (logged here) or
@@ -113,7 +113,7 @@ ground-truth rollout (10 seeds, expected-reward, n=50k). Numbers as produced:
 | ips    | 45134 | 42850 | **+2283** |
 | snips  | 44295 | 42826 | +1469 |
 | dr     | 44241 | 43113 | +1128 |
-| chowk  | 44052 | 43602 | +449 |
+| switchyard  | 44052 | 43602 | +449 |
 (legacy baseline true value ≈ 39905.)
 
 **This inverts the brief's expected story.** With §4.2/§5 exactly as written,
@@ -145,7 +145,7 @@ recorded before seeing its downstream numbers (no iterative fishing):
 
 Predicted (to verify): pa+hdfc+upi and pb+hdfc+upi both ≈0.95 success, so at
 small tickets pb wins on expected reward (lower % fee vs pa's flat ₹4); direct,
-blind to pb's boost, keeps picking pa → wrong; chowk's exploration restores pb
+blind to pb's boost, keeps picking pa → wrong; switchyard's exploration restores pb
 coverage → picks pb → right. The estimation-error headline should then show
 direct overstating on the starved segment. Will report the ACTUAL result, and
 keep this configuration frozen through the held-out run (§6.1).
@@ -171,14 +171,14 @@ operational reality placed in a legacy-starved region, each magnitude anchored t
 1. `pb + hdfc + upi : −0.16` (was +0.09). pb has a bank-specific weakness on HDFC
    UPI. Legacy starves pb-on-upi (0.01), so direct thinks pb is base-good, routes
    small hdfc·upi tickets to pb, overstates, and loses to pc. → the §6.1 segment
-   table (hdfc×upi): direct wrong, chowk right.
+   table (hdfc×upi): direct wrong, switchyard right.
 2. `pa + amount > ₹10k : −0.18` (new). The flat-fee processor pa throttles large
    tickets. Legacy sends >₹5k to pb (pa starved at 0.03), so direct extrapolates
    pa's base success, is seduced by pa's flat-fee cost advantage at scale, routes
    large tickets to pa, overstates, and loses big. → the high-stakes money story.
 
 Both are invisible to direct precisely because they live where the legacy policy
-never looked; chowk's ε-exploration restores that coverage. Note: a large effect
+never looked; switchyard's ε-exploration restores that coverage. Note: a large effect
 in a *starved* cell is still fine per §4.2's "keep modest" caveat — the modesty
 concern is about *covered* cells (where a big effect is obvious to everyone); a
 starved-cell effect is invisible to direct at any size, which is the whole point.
@@ -221,12 +221,12 @@ Results table (₹/1k): estimated / true / error:
 - ips    42994 / 40436 / **+2558**
 - snips  43070 / 40626 / +2445
 - dr     42987 / 41005 / +1981
-- chowk  42180 / 41238 / **+942**    (2nd-best true value, beats all reweighting)
+- switchyard  42180 / 41238 / **+942**    (2nd-best true value, beats all reweighting)
 
 **OPE honesty (the headline).** Value of a FIXED starved-region policy
 (direct-greedy, routes large→pa), true 41764:
-  chowk **+17** · dr +259 · direct +646 · snips −1138 · ips −2101.
-chowk is the only estimator that stays honest into the unexplored region.
+  switchyard **+17** · dr +259 · direct +646 · snips −1138 · ips −2101.
+switchyard is the only estimator that stays honest into the unexplored region.
 Adversarial "all large→pa" policy (true 38974): direct overstates by **+1954** —
 it would deploy a money-loser believing it great.
 
@@ -235,14 +235,14 @@ success is accurate below ₹5k (gap ≈ +0.02) but a persistent **+0.10 too hig
 above ₹5k** (predicts ~0.78, truth 0.68) — the region legacy starves.
 
 Segment table (hdfc×upi, average-based true best): all methods correct on
-<₹10k; on >₹10k direct/ips/chowk pick pa (wrong), snips/dr pick pc — that cell's
+<₹10k; on >₹10k direct/ips/switchyard pick pa (wrong), snips/dr pick pc — that cell's
 true best (pc) is starved for *everyone* (≤46 samples even combined), so it stays
 contested. Honest nuance, reported as-is.
 
 Interpretation (honest): a well-regularised GBM (direct) is a strong policy on
 smooth structure — the naive method is NOT simply "bad". Its real danger is
 epistemic: it cannot tell a good policy from a bad one where it never explored,
-and it overstates any policy that ventures there. At ε=0.03 chowk's edge is
+and it overstates any policy that ventures there. At ε=0.03 switchyard's edge is
 primarily this honesty (OPE), plus a modest, real policy gain over the other
 off-policy methods; a thicker budget would be needed to fully resolve the deepest
 starved cells. This will be stated plainly in the README (no overselling).
@@ -258,10 +258,10 @@ Held-out regime = different traffic mix (50/35/15 method split, uniform issuers,
 σ=1.45 fatter tail, 21 days) + different degradation schedule (day%7 ∈ {1,4}).
 Legacy baseline 51312, oracle 54075 ₹/1k (higher scale — fatter tail ⇒ bigger
 tickets). True values (policy applied to held-out traffic):
-- direct 53516 · **chowk 52776** · dr 52285 · snips 51424 · ips 51253.
+- direct 53516 · **switchyard 52776** · dr 52285 · snips 51424 · ips 51253.
 
-**Finding: the policy-quality ordering is preserved** — direct > chowk > dr >
-snips > ips, exactly as on the main regime. chowk still beats every off-policy
+**Finding: the policy-quality ordering is preserved** — direct > switchyard > dr >
+snips > ips, exactly as on the main regime. switchyard still beats every off-policy
 method and tracks direct under a materially different regime; the learned
 policies generalise.
 
@@ -281,7 +281,7 @@ check, and it passes.
 - Honest summary of the headline: the naive supervised model is a *strong*
   policy on smooth structure; its danger is epistemic (it can't tell a good
   policy from a bad one in the unexplored region, and over-values policies that
-  venture there). chowk's 3% budget buys that honesty (OPE error +17 vs direct
+  venture there). switchyard's 3% budget buys that honesty (OPE error +17 vs direct
   +647) and a modest, real policy gain over the other off-policy methods.
   Reported with all caveats in the README's limitations.
 

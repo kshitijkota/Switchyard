@@ -4,7 +4,7 @@ The direct model plus IPW-weighted residuals: unbiased if EITHER the model or th
 propensities are right, and lower-variance than plain IPS. On the legacy logs its
 correction term still cannot fire in starved cells (no logged action there), so
 in exactly those cells it collapses back to the (biased) direct model — which is
-what chowk's exploration slice fixes.
+what switchyard's exploration slice fixes.
 """
 
 from __future__ import annotations

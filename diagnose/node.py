@@ -32,7 +32,7 @@ from diagnose.schema import (
 _ROOT = os.path.dirname(os.path.dirname(__file__))
 CACHE_DIR = os.path.join(_ROOT, "diagnose", "cache")
 INCIDENT_LOG = os.path.join(_ROOT, "diagnose", "cache", "incidents.log")
-LLM_MODEL = os.environ.get("CHOWK_DIAGNOSE_MODEL", "claude-opus-5")
+LLM_MODEL = os.environ.get("SWITCHYARD_DIAGNOSE_MODEL", "claude-opus-5")
 
 
 @dataclass

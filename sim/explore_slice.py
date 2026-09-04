@@ -1,4 +1,4 @@
-"""Exploration-slice generation — AGENT_BRIEF §6 (chowk) / §6.2 / build step 6.
+"""Exploration-slice generation — AGENT_BRIEF §6 (switchyard) / §6.2 / build step 6.
 
 Runs one more operating epoch under the ε-greedy policy (exploit = legacy mode,
 ε = 0.03). Of these decisions ~3% are routed uniformly at random — that 3% is the
@@ -6,7 +6,7 @@ Runs one more operating epoch under the ε-greedy policy (exploit = legacy mode,
 
 Writes:
   data/explore.jsonl      {context, decision, outcome} lines, same schema as the
-                          legacy logs; chowk consumes legacy + this.
+                          legacy logs; switchyard consumes legacy + this.
   data/explore_aux.jsonl  {txn_id, was_explore, exploit_proc} — the extra facts
                           the §6.2 accounting needs. Kept OUT of the event log.
 

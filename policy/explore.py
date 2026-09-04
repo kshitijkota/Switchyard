@@ -1,4 +1,4 @@
-"""ε-exploration policy — AGENT_BRIEF §6 (chowk) / §6.2.
+"""ε-exploration policy — AGENT_BRIEF §6 (switchyard) / §6.2.
 
 A budgeted slice of traffic routed by ε-greedy on top of a DETERMINISTIC exploit
 policy (the legacy mode). With probability 1−ε follow the exploit choice; with

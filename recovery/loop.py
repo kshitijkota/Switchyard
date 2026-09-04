@@ -1,7 +1,7 @@
 """Recovery loop — AGENT_BRIEF §7.
 
 When a payment fails, decide which processor to re-attempt on, and whether to
-re-attempt at all. Same routing brain (chowk), second attempt.
+re-attempt at all. Same routing brain (switchyard), second attempt.
 
 Stopping rules:
   - never re-attempt if expected net reward ≤ 0,
@@ -32,7 +32,7 @@ from recovery.store import IdempotencyStore
 MAX_ATTEMPTS = 3
 HARD_DECLINE_CODES = frozenset({"U16"})   # risk-rejected / expired instrument
 EMANDATE_MIN_DELAY = timedelta(hours=1)
-POLICY_VERSION = "chowk-recovery-v1"
+POLICY_VERSION = "switchyard-recovery-v1"
 
 _ROOT = os.path.dirname(os.path.dirname(__file__))
 AUDIT_PATH = os.path.join(_ROOT, "artifacts", "audit.jsonl")

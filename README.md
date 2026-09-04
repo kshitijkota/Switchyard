@@ -1,6 +1,6 @@
-# Chowk
+# Switchyard
 
-**Chowk routes each payment to the processor that maximises expected net revenue, and — unlike a supervised model trained on confounded logs — spends a small, budgeted slice of randomly-routed traffic so its value estimates stay honest in the segments the old policy never explored.**
+**Switchyard routes each payment to the processor that maximises expected net revenue, and — unlike a supervised model trained on confounded logs — spends a small, budgeted slice of randomly-routed traffic so its value estimates stay honest in the segments the old policy never explored.**
 
 > ## ⚠️ All data here is synthetic.
 > Every number in this README is produced by a simulator in this repository with **known, controlled latent ground truth** — no real payment data is used. Reproduce everything with `python verify.py`. No figure below is hand-written; each is emitted by a script (ABSOLUTE RULE 1).
@@ -9,7 +9,7 @@
 
 ## The one-sentence problem
 
-Historical transaction logs were produced by an existing routing policy. Where that policy almost never sent a segment to a processor, the logs contain almost no evidence about that pair. A supervised model trained on those logs doesn't learn which processor is better there — **it extrapolates, confidently, with no signal that it is guessing.** You cannot learn what you never tried. Chowk fixes that with a 3% exploration budget and proves it on a simulator where the true answer is known.
+Historical transaction logs were produced by an existing routing policy. Where that policy almost never sent a segment to a processor, the logs contain almost no evidence about that pair. A supervised model trained on those logs doesn't learn which processor is better there — **it extrapolates, confidently, with no signal that it is guessing.** You cannot learn what you never tried. Switchyard fixes that with a 3% exploration budget and proves it on a simulator where the true answer is known.
 
 A second, smaller point: the right processor depends on **ticket size**, because processors have different fee shapes (flat vs percentage). The objective is expected **net revenue per attempt**, not success rate.
 
@@ -17,7 +17,7 @@ A second, smaller point: the right processor depends on **ticket size**, because
 
 ## Results (§6.1)
 
-Four methods, learned from the same 200,000 confounded legacy logs (`chowk` additionally gets a 200k epoch with 3% of decisions randomised). Each proposes a per-cell routing policy and its own estimate of that policy's value. **True value** is computed by rolling the policy forward through fresh simulated traffic (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
+Four methods, learned from the same 200,000 confounded legacy logs (`switchyard` additionally gets a 200k epoch with 3% of decisions randomised). Each proposes a per-cell routing policy and its own estimate of that policy's value. **True value** is computed by rolling the policy forward through fresh simulated traffic (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
 
 | Method | Estimated | True | **Estimation error** | True 95% CI | Improvement over legacy (CI) | Weights clipped |
 |---|---:|---:|---:|:---:|:---:|---:|
@@ -25,11 +25,11 @@ Four methods, learned from the same 200,000 confounded legacy logs (`chowk` addi
 | ips    | 42994.3 | 40436.1 | **+2558.2** | [40127, 40775] | +319 [289, 347] | 0 |
 | snips  | 43070.3 | 40625.6 | **+2444.7** | [40317, 40968] | +508 [481, 538] | 0 |
 | dr     | 42986.6 | 41005.4 | **+1981.3** | [40686, 41357] | +888 [863, 914] | 0 |
-| **chowk** | 42180.4 | **41238.3** | **+942.1** | [40918, 41597] | +1121 [1100, 1142] | 4039 |
+| **switchyard** | 42180.4 | **41238.3** | **+942.1** | [40918, 41597] | +1121 [1100, 1142] | 4039 |
 
 Legacy baseline true value **40117.1**; oracle (best possible) **42325.3**. Every method's improvement CI clears zero, so all are *distinguishable from baseline*.
 
-Read the **estimation-error column** — the brief's headline. Every off-policy value estimator **overstates its own policy** (ips by ₹2558, snips ₹2445, dr ₹1981 per 1k). `chowk` overstates least of the reweighting family (₹942) *and* has the highest true value of the four. `direct`'s own-policy error looks small (₹647) — but that number is deceptive, which the next result shows.
+Read the **estimation-error column** — the brief's headline. Every off-policy value estimator **overstates its own policy** (ips by ₹2558, snips ₹2445, dr ₹1981 per 1k). `switchyard` overstates least of the reweighting family (₹942) *and* has the highest true value of the four. `direct`'s own-policy error looks small (₹647) — but that number is deceptive, which the next result shows.
 
 ### The honest headline: what happens when a policy relies on the unexplored region
 
@@ -39,7 +39,7 @@ Read the **estimation-error column** — the brief's headline. Every off-policy 
 
 | Estimator | Estimate | Error vs truth |
 |---|---:|---:|
-| **chowk** | 41780.8 | **+17.3** |
+| **switchyard** | 41780.8 | **+17.3** |
 | dr | 42022.4 | +258.8 |
 | direct | 42410.0 | +646.5 |
 | snips | 40625.0 | −1138.5 |
@@ -52,10 +52,10 @@ Read the **estimation-error column** — the brief's headline. Every off-policy 
 | direct | 40928.5 | **+1954.2** |
 | dr | 40580.8 | +1606.5 |
 | snips | 40252.8 | +1278.5 |
-| chowk | 40276.8 | +1302.5 |
+| switchyard | 40276.8 | +1302.5 |
 | ips | 40162.8 | +1188.5 |
 
-`chowk` values the direct-greedy policy to within **₹17 / 1k of the truth**; `direct`'s own model overstates it by **₹647**, and would price the money-losing trap policy **₹1954 too high** — it would deploy a loss-maker believing it was excellent, with no warning. `chowk`, having spent 3% on exploration, is the only estimator you can trust into the region the legacy policy never tried. *That* is what "methods that overstate their value mislead their operator" means.
+`switchyard` values the direct-greedy policy to within **₹17 / 1k of the truth**; `direct`'s own model overstates it by **₹647**, and would price the money-losing trap policy **₹1954 too high** — it would deploy a loss-maker believing it was excellent, with no warning. `switchyard`, having spent 3% on exploration, is the only estimator you can trust into the region the legacy policy never tried. *That* is what "methods that overstate their value mislead their operator" means.
 
 ### Why direct is blind there — the mechanism
 
@@ -77,7 +77,7 @@ Read the **estimation-error column** — the brief's headline. Every off-policy 
 
 Which processor each method picks, against the true best (argmax of each bucket's average true expected reward):
 
-| Ticket bucket | True best | direct | ips | snips | dr | chowk |
+| Ticket bucket | True best | direct | ips | snips | dr | switchyard |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | <₹300 | pb | ✓ | ✓ | ✓ | ✓ | ✓ |
 | ₹300–1k | pb | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -85,7 +85,7 @@ Which processor each method picks, against the true best (argmax of each bucket'
 | ₹3k–10k | pa | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **>₹10k** | **pc** | pa ✗ | pa ✗ | ✓ | ✓ | pa ✗ |
 
-Honest reading: on well-covered ticket sizes every method (direct included) picks correctly. On the starved **>₹10k** bucket, `direct` routes to `pa` — the processor it over-values there — which `snips`/`dr` avoid. `chowk` also mis-picks this specific cell: at a 3% budget the truly-best `pc` is starved for *everyone* (≤46 samples even after exploration), so this deepest cell stays contested. This is reported as measured, not smoothed (ABSOLUTE RULE 6).
+Honest reading: on well-covered ticket sizes every method (direct included) picks correctly. On the starved **>₹10k** bucket, `direct` routes to `pa` — the processor it over-values there — which `snips`/`dr` avoid. `switchyard` also mis-picks this specific cell: at a 3% budget the truly-best `pc` is starved for *everyone* (≤46 samples even after exploration), so this deepest cell stays contested. This is reported as measured, not smoothed (ABSOLUTE RULE 6).
 
 ---
 
@@ -101,7 +101,7 @@ A **naive success-rate router** (route to highest predicted success, ignoring fe
 
 ## Money recovered by the recovery loop (§7)
 
-When a payment fails, the same routing brain decides whether and where to re-attempt. Over **5,000 real failures**, `chowk`'s smart rerouting recovers **₹6,361.63 more** than the legacy retry policy — an incremental **127.23 paise/failure**, 95% CI **[113.22, 140.84] paise**, which excludes zero.
+When a payment fails, the same routing brain decides whether and where to re-attempt. Over **5,000 real failures**, `switchyard`'s smart rerouting recovers **₹6,361.63 more** than the legacy retry policy — an incremental **127.23 paise/failure**, 95% CI **[113.22, 140.84] paise**, which excludes zero.
 
 **Stopping rules** (all enforced; live engine run over the 5,000 failures): never re-attempt if expected net reward ≤ 0, at most 3 attempts, never re-attempt a hard decline. Outcomes: **3,489 recovered**, 1,447 hard declines correctly not retried, 51 hit the attempt cap, 13 stopped on non-positive expected reward. Every attempt is written to `artifacts/audit.jsonl`.
 
@@ -134,19 +134,19 @@ A deliberately different regime — 50/35/15 method mix, uniform issuers, a fatt
 | Method | True value on held-out (₹/1k) |
 |---|---:|
 | direct | 53516.1 |
-| **chowk** | **52776.2** |
+| **switchyard** | **52776.2** |
 | dr | 52285.1 |
 | snips | 51424.7 |
 | ips | 51253.8 |
 
-Legacy 51312.3, oracle 54074.9. **The policy-quality ordering is preserved** (direct > chowk > dr > snips > ips): the learned policies generalise, and chowk still beats every off-policy method under a shifted regime. The main-calibrated *self-estimates* (~₹42k) do not transfer to the held-out value scale (~₹52k) — everyone under-states by ~₹10k/1k — which is the regime's value-scale shift, not a coverage effect (a like-for-like estimate comparison would need held-out logs, which RULE 5 forbids collecting).
+Legacy 51312.3, oracle 54074.9. **The policy-quality ordering is preserved** (direct > switchyard > dr > snips > ips): the learned policies generalise, and switchyard still beats every off-policy method under a shifted regime. The main-calibrated *self-estimates* (~₹42k) do not transfer to the held-out value scale (~₹52k) — everyone under-states by ~₹10k/1k — which is the regime's value-scale shift, not a coverage effect (a like-for-like estimate comparison would need held-out logs, which RULE 5 forbids collecting).
 
 ---
 
 ## Known limitations (real, unsmoothed)
 
 1. **The naive method does not simply "fail."** With modest, smooth latent effects a well-regularised GBM (`direct`) is a *strong, robust* policy — it beats the off-policy estimators on true value. The failure this project demonstrates is **conditional on coverage**: it appears precisely where a consequential fact (`pa`'s −0.18 large-ticket weakness) sits in a region the legacy policy starved. We placed it there deliberately and transparently (see `NOTES.md`, 2026-09-04, and `DECISIONS.md`); that placement *is* the phenomenon, not a thumb on the scale. Run against smooth, well-covered facts, `direct` would not be fooled.
-2. **ε = 0.03 buys honesty, not (yet) a big policy win.** At this budget `chowk`'s advantage is primarily *epistemic* — it knows what a policy is worth in the starved region (OPE error +17 vs direct +647) — plus a modest true-value gain over the other off-policy methods. It does **not** fully resolve the deepest-starved cell (`pc` on >₹10k), which needs a larger exploration budget or more epochs. We do not claim otherwise.
+2. **ε = 0.03 buys honesty, not (yet) a big policy win.** At this budget `switchyard`'s advantage is primarily *epistemic* — it knows what a policy is worth in the starved region (OPE error +17 vs direct +647) — plus a modest true-value gain over the other off-policy methods. It does **not** fully resolve the deepest-starved cell (`pc` on >₹10k), which needs a larger exploration budget or more epochs. We do not claim otherwise.
 3. **The simulator models each attempt as an independent draw** (no failure persistence). Real insufficient-funds/risk declines would recur on retry regardless of processor, so absolute recovery counts (3,489/5,000) are optimistic; the *incremental-over-legacy* metric, which is what we headline, is unaffected.
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space and the uniform-logs sanity test is clean, at the cost of some within-bucket resolution near crossovers.
 5. **The soft degradation regime (`pa+sbi+upi`, certain days/hours) is unlearnable by every method** — the models have no day-of-week feature — so no method routes around it; it is latent noise, not a demonstrated win.

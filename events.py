@@ -1,4 +1,4 @@
-"""Frozen event schema for Chowk.
+"""Frozen event schema for Switchyard.
 
 This is the contract every other module composes around. Field names are frozen
 (see AGENT_BRIEF §3) and must not change.

@@ -1,11 +1,6 @@
 {
   "adversarial_honesty": {
     "estimators": {
-      "chowk": {
-        "coverage": 1.0,
-        "error": 1302.5,
-        "estimate": 40276.8
-      },
       "direct": {
         "coverage": 1.0,
         "error": 1954.2,
@@ -25,6 +20,11 @@
         "coverage": 1.0,
         "error": 1278.5,
         "estimate": 40252.8
+      },
+      "switchyard": {
+        "coverage": 1.0,
+        "error": 1302.5,
+        "estimate": 40276.8
       }
     },
     "target_policy": "adversarial: ALL large tickets \u2192 pa (the trap)",
@@ -58,11 +58,6 @@
   "naive_success_router_value": 39861.9,
   "ope_honesty": {
     "estimators": {
-      "chowk": {
-        "coverage": 1.0,
-        "error": 17.3,
-        "estimate": 41780.8
-      },
       "direct": {
         "coverage": 1.0,
         "error": 646.5,
@@ -82,6 +77,11 @@
         "coverage": 0.9991,
         "error": -1138.5,
         "estimate": 40625.0
+      },
+      "switchyard": {
+        "coverage": 1.0,
+        "error": 17.3,
+        "estimate": 41780.8
       }
     },
     "target_policy": "direct-greedy (visits starved large\u2192pa)",
@@ -220,7 +220,7 @@
         1142.4
       ],
       "improvement_over_legacy": 1121.2,
-      "method": "chowk",
+      "method": "switchyard",
       "n_clipped": 4039,
       "true_value": 41238.3,
       "true_value_ci": [
@@ -233,11 +233,11 @@
     {
       "bucket": "<\u20b9300",
       "picks": {
-        "chowk": "pb",
         "direct": "pb",
         "dr": "pb",
         "ips": "pb",
-        "snips": "pb"
+        "snips": "pb",
+        "switchyard": "pb"
       },
       "segment": "upi\u00d7hdfc\u00d7<\u20b9300",
       "true_best": "pb",
@@ -250,11 +250,11 @@
     {
       "bucket": "\u20b9300\u20131k",
       "picks": {
-        "chowk": "pb",
         "direct": "pb",
         "dr": "pb",
         "ips": "pb",
-        "snips": "pb"
+        "snips": "pb",
+        "switchyard": "pb"
       },
       "segment": "upi\u00d7hdfc\u00d7\u20b9300\u20131k",
       "true_best": "pb",
@@ -267,11 +267,11 @@
     {
       "bucket": "\u20b91k\u20133k",
       "picks": {
-        "chowk": "pa",
         "direct": "pa",
         "dr": "pa",
         "ips": "pa",
-        "snips": "pa"
+        "snips": "pa",
+        "switchyard": "pa"
       },
       "segment": "upi\u00d7hdfc\u00d7\u20b91k\u20133k",
       "true_best": "pa",
@@ -284,11 +284,11 @@
     {
       "bucket": "\u20b93k\u201310k",
       "picks": {
-        "chowk": "pa",
         "direct": "pa",
         "dr": "pa",
         "ips": "pa",
-        "snips": "pa"
+        "snips": "pa",
+        "switchyard": "pa"
       },
       "segment": "upi\u00d7hdfc\u00d7\u20b93k\u201310k",
       "true_best": "pa",
@@ -301,11 +301,11 @@
     {
       "bucket": ">\u20b910k",
       "picks": {
-        "chowk": "pa",
         "direct": "pa",
         "dr": "pc",
         "ips": "pa",
-        "snips": "pc"
+        "snips": "pc",
+        "switchyard": "pa"
       },
       "segment": "upi\u00d7hdfc\u00d7>\u20b910k",
       "true_best": "pc",

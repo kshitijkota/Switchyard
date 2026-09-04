@@ -116,7 +116,7 @@ def make_crossover_plot(out_png: str | None = None, out_json: str | None = None)
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
     # Fixed metadata so the PNG does not carry a run timestamp.
-    fig.savefig(out_png, dpi=110, metadata={"Software": "chowk"})
+    fig.savefig(out_png, dpi=110, metadata={"Software": "switchyard"})
     plt.close(fig)
 
     summary = {
@@ -157,7 +157,7 @@ def make_extrapolation_plot(evidence: dict, out_png: str | None = None) -> str:
     ax.grid(True, alpha=0.25)
     ax.set_ylim(0.5, 1.0)
     fig.tight_layout()
-    fig.savefig(out_png, dpi=110, metadata={"Software": "chowk"})
+    fig.savefig(out_png, dpi=110, metadata={"Software": "switchyard"})
     plt.close(fig)
     return out_png
 

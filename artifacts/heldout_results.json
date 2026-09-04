@@ -1,7 +1,7 @@
 {
   "adversarial_honesty": {
     "estimators": {
-      "chowk": {
+      "switchyard": {
         "coverage": 1.0,
         "error": -8292.9,
         "estimate": 40276.8
@@ -33,7 +33,7 @@
   "legacy_baseline_value": 51312.3,
   "ope_honesty": {
     "estimators": {
-      "chowk": {
+      "switchyard": {
         "coverage": 1.0,
         "error": -11735.3,
         "estimate": 41780.8
@@ -111,7 +111,7 @@
     {
       "estimated_value_main": 42180.4,
       "estimation_error": -10595.7,
-      "method": "chowk",
+      "method": "switchyard",
       "true_value_heldout": 52776.2
     }
   ],
