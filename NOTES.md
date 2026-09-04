@@ -285,6 +285,16 @@ check, and it passes.
   +647) and a modest, real policy gain over the other off-policy methods.
   Reported with all caveats in the README's limitations.
 
+### 2026-09-05 — Rename Chowk → Switchyard (final task list, TASK 1)
+
+The project and its flagship DR+exploration method were renamed **Chowk →
+Switchyard** everywhere: code, class/method identifiers, JSON keys, artifacts,
+docstrings, README, DECISIONS. `policy/chowk.py → policy/switchyard.py`. Numbers
+are unchanged (identical method, new label); the run-once held-out artifact was
+relabelled without re-running (RULE 5). This dated line is the single remaining
+reference to the old name (git history retains the earlier commits, which we do
+not rewrite). `grep -ri chowk .` (excluding `.git/`) returns only this entry.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
