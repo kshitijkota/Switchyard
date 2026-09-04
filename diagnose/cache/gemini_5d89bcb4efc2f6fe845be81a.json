@@ -1,1 +1,0 @@
-{"_provider": "gemini", "_tokens": [350, 92], "cause": "NETWORK_TRANSIENT", "confidence": 0.92, "evidence": ["GATEWAY_ERROR accounts for 40.0% of cohort failures vs 12.4% in baseline", "U67 (PSP timeout) accounts for 32.5% of cohort failures vs 12.5% in baseline", "Combined network/infrastructure error rate elevated by ~3x over baseline"]}

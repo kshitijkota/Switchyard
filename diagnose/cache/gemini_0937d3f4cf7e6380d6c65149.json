@@ -1,1 +1,0 @@
-{"_provider": "gemini", "_tokens": [351, 91], "cause": "MERCHANT_INTEGRATION", "confidence": 0.94, "evidence": ["BAD_REQUEST_ERROR accounts for 57.5% of cohort failures vs 9.1% in baseline", "Massive relative over-representation of malformed requests (BAD_REQUEST_ERROR)", "Other codes like GATEWAY_ERROR, U30, and U67 are significantly subdued relative to baseline"]}

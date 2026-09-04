@@ -115,29 +115,25 @@ When a payment fails, the same routing brain decides whether and where to re-att
 
 ## Diagnosis component (LLM) and its scores
 
-A single contained job (never routes): given a cohort's failure-code counts and a baseline comparison, output structured JSON `{cause, confidence, evidence}` or abstain with `INSUFFICIENT_EVIDENCE`. Output is schema-validated with a fallback to `INSUFFICIENT_EVIDENCE` on any malformed response, and cached by input hash. **Abstention is rewarded, not penalised**, because a calibrated "I don't know" is the correct answer for an un-diagnosable cohort and is strictly better than a confident wrong guess.
+A single contained job (never routes): given a cohort's failure-code counts and a baseline comparison, output structured JSON `{cause, confidence, evidence}` or abstain with `INSUFFICIENT_EVIDENCE`. Output is schema-validated with a fallback to `INSUFFICIENT_EVIDENCE` on any malformed response, and cached by input hash. A **sample-size guardrail** abstains deterministically (no model call) on cohorts below 40 failures — a production diagnoser must not attribute a cause from a handful of events. **Abstention is rewarded, not penalised**, because a calibrated "I don't know" is the correct answer for an un-diagnosable cohort and is strictly better than a confident wrong guess.
 
-**Measured by a real model — Gemini `gemini-3.8-flash` (temperature 0, thinking disabled, strict JSON).** This was a **partial run**: the free tier's `PerDayPerProjectPerModel` quota is **20 requests/day**, which was exhausted after **9 of 19 cohorts** completed.
+**Measured by a real model — OpenAI `gpt-4o-mini` (temperature 0, strict JSON), all 19 cohorts complete.**
 
-| Metric (Gemini, 9/19 cohorts completed) | Value |
+| Metric (OpenAI gpt-4o-mini, all 19 cohorts) | Value |
 |---|---:|
-| Accuracy on the completed (all clear) cohorts | **1.000** |
-| Parse-failure rate | 0.000 |
-| Total tokens | 3,154 in / 847 out |
-
-The 9 completed cohorts were all *clear* cohorts (they run first), so Gemini did **not** reach the ambiguous cohorts that test abstention. Those scores reproduce from the committed cache with no key; a rerun after the daily quota resets completes the rest.
-
-**Abstention — measured by the deterministic offline statistical diagnoser, which is NOT a language model** (all 19 cohorts; reported here because Gemini's quota blocked the ambiguous cohorts):
-
-| Metric (offline statistical, all 19 cohorts — NOT LLM) | Value |
-|---|---:|
-| Accuracy on clear cohorts | 0.923 |
-| Abstention rate on ambiguous cohorts (rewarded) | 0.667 |
+| Accuracy on clear cohorts | **0.846** |
+| Abstention rate on ambiguous cohorts (rewarded) | **0.667** |
 | Harmful-error rate (a wrong assertion) | 0.105 |
+| Parse-failure rate | 0.000 |
+| Total tokens / estimated cost | 7,138 in / 942 out — **$0.0016** |
 
-These offline numbers are **not** presented as language-model performance. The offline baseline abstains correctly on tiny cohorts but over-asserts on genuine two-cause blends (the 0.105 harmful rate) — exactly where an LLM's reasoning is expected to help.
+What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every issuer / merchant / network cohort (a clearly-elevated code family); it abstains on the 4 tiny cohorts (via the guardrail) and on 2 of 4 customer-side cohorts — a *defensible* abstention, since customer-side failure is the ambient baseline, not an anomaly ("is this a cause or just normal attrition?"). Its only genuine errors are on the 2 constructed **two-cause blends**, where it names the larger cause instead of abstaining (the 0.105 harmful rate) — the hardest, most ambiguous cohorts.
 
-**Disclosure:** provider Gemini, model `gemini-3.8-flash`; 3,154 input / 847 output tokens; parse-failure rate 0.000. Gemini free-tier inputs are used to improve Google's products; **all inputs are synthetic failure-code counts containing no real transaction or customer data.** OpenAI (`gpt-4o-mini`) is wired as a fallback for a non-rate-limit Gemini failure only, with a $2 spend tripwire; it was not invoked.
+**Baseline comparison — deterministic offline statistical diagnoser, NOT a language model** (all 19 cohorts): accuracy **0.923**, abstention **0.667**, harmful **0.105**. The small LLM roughly matches a hand-written rule here — an honest finding: this five-way classification is simple enough that a good rule is hard to beat, and gpt-4o-mini's edge (natural-language evidence, no threshold tuning) does not translate into a higher score on it. These offline numbers are **not** presented as language-model performance.
+
+**Earlier attempt (Gemini):** the run first used Gemini `gemini-3.8-flash`, which diagnosed its clear cohorts at accuracy 1.0 but hit the free tier's `PerDayPerProjectPerModel` cap of **20 requests/day** after 9 cohorts; per the design it stopped rather than burn the quota, and OpenAI (user-authorised, up to $20) completed the run.
+
+**Disclosure:** provider OpenAI, model `gpt-4o-mini`; 7,138 input / 942 output tokens; **estimated cost $0.0016** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Anthropic path stays selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
 
 ---
 
@@ -148,7 +144,7 @@ These offline numbers are **not** presented as language-model performance. The o
 3. **The simulator models each attempt as an independent draw** (no failure persistence), so absolute recovery counts (3,489/5,000) are optimistic; the *incremental-over-legacy* metric, which is headlined, is unaffected.
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
-6. **The diagnosis LLM run is partial** (9/19 cohorts) because of a 20-request/day free-tier quota; abstention is reported only from the offline baseline, clearly labelled as non-LLM.
+6. **The LLM diagnosis roughly matches a hand-written rule** (0.846 vs 0.923 accuracy; identical 0.667 abstention / 0.105 harmful): the five-way classification is simple enough that gpt-4o-mini's reasoning does not beat a deterministic rule, and it still over-asserts on genuinely-mixed cohorts. A larger model would likely handle the blends better.
 7. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
 ---

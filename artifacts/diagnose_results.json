@@ -1,16 +1,16 @@
 {
-  "abstained_on_clear": 0,
-  "abstention_rate_on_ambiguous": null,
-  "accuracy_on_clear": 1.0,
-  "ambiguous_cohorts": 0,
-  "clear_cohorts": 9,
-  "cohorts_completed": 9,
-  "cohorts_skipped": 3,
+  "abstained_on_clear": 2,
+  "abstention_rate_on_ambiguous": 0.667,
+  "accuracy_on_clear": 0.846,
+  "ambiguous_cohorts": 6,
+  "clear_cohorts": 13,
+  "cohorts_completed": 19,
+  "cohorts_skipped": 0,
   "cohorts_total": 19,
   "detail": [
     {
       "cohort": "issuer_degraded cohort #1",
-      "confidence": 0.94,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -18,7 +18,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #2",
-      "confidence": 0.95,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -26,7 +26,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #3",
-      "confidence": 0.95,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -34,7 +34,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #4",
-      "confidence": 0.93,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -42,7 +42,7 @@
     },
     {
       "cohort": "merchant_glitch cohort #1",
-      "confidence": 0.94,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -50,7 +50,7 @@
     },
     {
       "cohort": "merchant_glitch cohort #2",
-      "confidence": 0.94,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -58,7 +58,7 @@
     },
     {
       "cohort": "merchant_glitch cohort #3",
-      "confidence": 0.94,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -66,7 +66,7 @@
     },
     {
       "cohort": "merchant_glitch cohort #4",
-      "confidence": 0.94,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -74,21 +74,102 @@
     },
     {
       "cohort": "network_incident cohort #1",
-      "confidence": 0.92,
+      "confidence": 0.9,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "NETWORK_TRANSIENT",
       "true": "NETWORK_TRANSIENT"
+    },
+    {
+      "cohort": "baseline cohort #1",
+      "confidence": 0.8,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #2",
+      "confidence": 0.8,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #3",
+      "confidence": 0.0,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #4",
+      "confidence": 0.0,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "issuer_degraded tiny sample",
+      "confidence": 0.0,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "network_incident tiny sample",
+      "confidence": 0.0,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "merchant_glitch tiny sample",
+      "confidence": 0.0,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "baseline tiny sample",
+      "confidence": 0.0,
+      "kind": "ambiguous",
+      "n_failures": 18,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "network_incident+merchant_glitch even blend",
+      "confidence": 0.9,
+      "kind": "ambiguous",
+      "n_failures": 80,
+      "predicted": "MERCHANT_INTEGRATION",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "issuer_degraded+network_incident even blend",
+      "confidence": 0.9,
+      "kind": "ambiguous",
+      "n_failures": 80,
+      "predicted": "ISSUER_DEGRADATION",
+      "true": "INSUFFICIENT_EVIDENCE"
     }
   ],
+  "estimated_cost_usd": 0.0016,
   "fallback_note": null,
-  "harmful_error_rate": 0.0,
+  "harmful_error_rate": 0.105,
   "measured_by_language_model": true,
-  "model": "gemini-3.8-flash",
+  "model": "gpt-4o-mini",
   "parse_failure_rate": 0.0,
-  "partial_run": true,
-  "provider": "gemini (live)",
-  "stop_reason": "rate_limit_exhausted",
-  "total_input_tokens": 3154,
-  "total_output_tokens": 847
+  "partial_run": false,
+  "provider": "openai (from committed cache)",
+  "stop_reason": null,
+  "total_input_tokens": 7138,
+  "total_output_tokens": 942
 }

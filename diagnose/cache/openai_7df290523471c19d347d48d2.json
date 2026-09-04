@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [476, 58], "cause": "NETWORK_TRANSIENT", "confidence": 0.9, "evidence": ["GATEWAY_ERROR cohort share 40% vs baseline 12%", "U67 cohort share 32% vs baseline 13%"]}

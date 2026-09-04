@@ -17,9 +17,9 @@ venv/
 # Recovery audit trail — regenerated on every run
 /artifacts/audit.jsonl
 
-# Diagnosis cache: COMMIT the Gemini cache (reproduces the LLM numbers with no
-# key); the other providers' caches + incident log are per-run and ignored.
+# Diagnosis cache: COMMIT the LLM caches (openai + gemini) so the diagnosis
+# numbers reproduce with no key; the offline/anthropic caches + incident log are
+# per-run and ignored.
 /diagnose/cache/statistical_*.json
 /diagnose/cache/anthropic_*.json
-/diagnose/cache/openai_*.json
 /diagnose/cache/*.log

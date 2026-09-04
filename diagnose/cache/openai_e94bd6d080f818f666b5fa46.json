@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [476, 58], "cause": "ISSUER_DEGRADATION", "confidence": 0.9, "evidence": ["U30 (bank declined) is 78% of cohort vs 13% baseline", "Other causes are significantly lower than their baselines", "Clear dominance of U30 in the failure codes"]}

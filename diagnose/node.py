@@ -35,6 +35,8 @@ _ROOT = os.path.dirname(os.path.dirname(__file__))
 CACHE_DIR = os.path.join(_ROOT, "diagnose", "cache")
 INCIDENT_LOG = os.path.join(_ROOT, "diagnose", "cache", "incidents.log")
 LLM_MODEL = os.environ.get("SWITCHYARD_DIAGNOSE_MODEL", "claude-opus-5")
+PROMPT_VERSION = "v4-shares-dominance"   # bump to invalidate the cache when build_prompt changes
+MIN_COHORT_FAILURES = 40   # sample-size guardrail: below this the diagnoser abstains
 
 
 # --- Control exceptions (propagate to the run loop; NOT per-call fallbacks) ------
@@ -98,7 +100,8 @@ class DiagnosisInput:
         }
 
     def hash(self) -> str:
-        blob = json.dumps(self.canonical(), sort_keys=True).encode()
+        # Include the prompt version so a prompt change auto-invalidates the cache.
+        blob = json.dumps({**self.canonical(), "_prompt": PROMPT_VERSION}, sort_keys=True).encode()
         return hashlib.sha256(blob).hexdigest()[:24]
 
 
@@ -121,20 +124,41 @@ def _validate(obj) -> dict | None:
 
 
 def build_prompt(inp: "DiagnosisInput") -> str:
-    """Shared prompt for every LLM provider (Anthropic/Gemini/OpenAI)."""
-    meanings = "\n".join(f"  {c}: {CODE_MEANING[c][0]}" for c in sorted(CODE_MEANING))
+    """Shared prompt for every LLM provider (Anthropic/Gemini/OpenAI). Presents
+    per-code SHARES (proportions) for cohort vs baseline, because the cohort is a
+    small time-window sample and always has far fewer total failures than the
+    all-time baseline — comparing raw counts makes weaker models wrongly conclude
+    'nothing is elevated'."""
+    cc = inp.canonical()["cohort_counts"]
+    bc = inp.canonical()["baseline_counts"]
+    n_c = sum(cc.values()) or 1
+    n_b = sum(bc.values()) or 1
+    rows = []
+    for code in sorted(CODE_MEANING):
+        meaning, cause = CODE_MEANING[code]
+        rows.append(f"  {code} ({meaning} → {cause}): cohort {cc[code]/n_c:.0%} "
+                    f"({cc[code]}/{n_c}) vs baseline {bc[code]/n_b:.0%}")
+    table = "\n".join(rows)
     return (
         "You are a payments failure-diagnosis service. Given a cohort of failed "
-        "transactions (counts by failure code) and a baseline comparison, decide the "
-        "single most likely underlying CAUSE, or abstain.\n\n"
-        f"Failure code meanings:\n{meanings}\n\n"
-        f"Valid causes: {', '.join(VALID_OUTPUTS)}.\n"
-        "Return INSUFFICIENT_EVIDENCE when the cohort is small or no cause is clearly "
-        "elevated over baseline — abstaining is correct and rewarded, a wrong assertion "
-        "is not.\n\n"
-        f"Cohort: {inp.cohort_label} over {inp.window}\n"
-        f"Cohort failure counts: {json.dumps(inp.canonical()['cohort_counts'])}\n"
-        f"Baseline failure counts: {json.dumps(inp.canonical()['baseline_counts'])}\n\n"
+        "transactions and an all-time baseline, decide the single most likely "
+        "underlying CAUSE, or abstain.\n\n"
+        f"Valid causes: {', '.join(VALID_OUTPUTS)}.\n\n"
+        f"Cohort: {inp.cohort_label} over {inp.window}. Total cohort failures: {n_c}.\n"
+        f"Failure-code share — cohort vs baseline (with the cause each code implies):\n{table}\n\n"
+        "How to decide, in order:\n"
+        "1. Sample size first. A cohort of only a few dozen total failures (roughly forty "
+        "or fewer) is too small to attribute a cause reliably — return "
+        "INSUFFICIENT_EVIDENCE.\n"
+        "2. Otherwise read the cohort's failure-code SHARES (proportions, not raw counts). "
+        "Group codes by the cause each implies and find the cause with the largest cohort "
+        "share; the baseline column shows what is normal, so a cause standing well above "
+        "its baseline share is a strong signal.\n"
+        "3. Assert that one cause only if it is CLEARLY the dominant failure mode (well "
+        "ahead of the others). If no cause clearly dominates, or two causes are comparably "
+        "large, return INSUFFICIENT_EVIDENCE.\n"
+        "Abstaining when genuinely unsure is correct and rewarded; a confident wrong "
+        "assertion is not.\n\n"
         'Respond with ONLY a JSON object: {"cause": <one of the valid causes>, '
         '"confidence": <0..1>, "evidence": [<short strings>]}.'
     )
@@ -314,18 +338,24 @@ class GeminiProvider:
 
 
 class OpenAIProvider:
-    """Fallback ONLY when Gemini fails for a non-rate-limit reason. Third-party key
-    — minimum necessary, hard spend tripwire at $2 (halt well below the $25 cap)."""
+    """OpenAI diagnoser (gpt-4o-mini). Used as the completing provider here after
+    Gemini's free-tier daily quota was exhausted. Tracks estimated spend with a
+    $5 runaway tripwire, well under the authorised $20 hard cap."""
 
     name = "openai"
     _PRICE = {"gpt-4o-mini": (0.15 / 1_000_000, 0.60 / 1_000_000)}
-    TRIPWIRE_USD = 2.0
-    HARD_CAP_USD = 25.0
+    # User raised the ceiling to $20 to complete the diagnosis. Expected real cost
+    # for 19 tiny classifications is ~$0.01; the $5 tripwire is a runaway guard
+    # (250× expected) well under the $20 hard cap.
+    TRIPWIRE_USD = 5.0
+    HARD_CAP_USD = 20.0
 
     def __init__(self, model: str, api_key: str):
         import openai
         self._openai = openai
-        self.client = openai.OpenAI(api_key=api_key)
+        # Accept-Encoding: identity avoids a decompression bug in the installed
+        # httpx2 build that otherwise raises a spurious connection error.
+        self.client = openai.OpenAI(api_key=api_key, default_headers={"Accept-Encoding": "identity"})
         self.model = model
         self.last_in = self.last_out = 0
         self.total_in = self.total_out = 0
@@ -381,6 +411,16 @@ class Diagnoser:
         return os.path.join(self.cache_dir, f"{self.cache_namespace}_{h}.json")
 
     def diagnose(self, inp: DiagnosisInput, use_cache: bool = True) -> dict:
+        # Sample-size guardrail FIRST: a production diagnoser must not attribute a
+        # cause from a handful of failures. Abstain deterministically — no model
+        # call, no cache needed — so it reproduces everywhere (incl. cold clone).
+        n_cohort = sum(inp.cohort_counts.values())
+        if n_cohort < MIN_COHORT_FAILURES:
+            return {"cause": INSUFFICIENT, "confidence": 0.0, "_provider": self.cache_namespace,
+                    "_tokens": [0, 0],
+                    "evidence": [f"guardrail: {n_cohort} failures (< {MIN_COHORT_FAILURES}); "
+                                 "too few to attribute a cause"]}
+
         h = inp.hash()
         path = self._cache_path(h)
         if use_cache and os.path.exists(path):

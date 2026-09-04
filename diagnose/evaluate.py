@@ -35,22 +35,36 @@ RESULTS_PATH = os.path.join(_ROOT, "artifacts", "diagnose_results.json")
 STATISTICAL_REF_PATH = os.path.join(_ROOT, "artifacts", "diagnose_results_statistical.json")
 
 
-def _committed_gemini_cache() -> bool:
-    return bool(glob.glob(os.path.join(CACHE_DIR, "gemini_*.json")))
+def _committed_cache(ns: str) -> bool:
+    return bool(glob.glob(os.path.join(CACHE_DIR, f"{ns}_*.json")))
 
 
 def _make_primary(force: str | None = None):
-    """(diagnoser, label, model) — Gemini first; else committed-Gemini-cache
-    reproduce (no key); else Anthropic; else offline statistical."""
+    """(diagnoser, label, model). Reproducibility-first: a COMMITTED LLM cache
+    reproduces the numbers with no key. OpenAI is the completing provider (the
+    canonical committed cache), then Gemini, then Anthropic, then offline.
+    `force` in {openai, gemini, anthropic, statistical} pins a provider live."""
     if force == "statistical":
         return Diagnoser(StatisticalProvider(), cache_namespace="statistical"), \
             "offline statistical (NOT a language model)", None
-    gk = os.environ.get("GEMINI_API_KEY")
-    if gk:
-        return Diagnoser(GeminiProvider(gemini_model(), gk, rpm=max_rpm()),
+    if force == "openai":
+        return Diagnoser(OpenAIProvider(openai_model(), os.environ["OPENAI_API_KEY"]),
+                         cache_namespace="openai"), "openai (live)", openai_model()
+    if force == "gemini":
+        return Diagnoser(GeminiProvider(gemini_model(), os.environ["GEMINI_API_KEY"], rpm=max_rpm()),
                          cache_namespace="gemini"), "gemini (live)", gemini_model()
-    if _committed_gemini_cache():
+
+    # Default: prefer the committed complete cache (no key, no cost), then keys.
+    if _committed_cache("openai"):
+        return Diagnoser(None, cache_namespace="openai"), "openai (from committed cache)", openai_model()
+    if os.environ.get("OPENAI_API_KEY"):
+        return Diagnoser(OpenAIProvider(openai_model(), os.environ["OPENAI_API_KEY"]),
+                         cache_namespace="openai"), "openai (live)", openai_model()
+    if _committed_cache("gemini"):
         return Diagnoser(None, cache_namespace="gemini"), "gemini (from committed cache)", gemini_model()
+    if os.environ.get("GEMINI_API_KEY"):
+        return Diagnoser(GeminiProvider(gemini_model(), os.environ["GEMINI_API_KEY"], rpm=max_rpm()),
+                         cache_namespace="gemini"), "gemini (live)", gemini_model()
     if os.environ.get("ANTHROPIC_API_KEY"):
         try:
             p = LLMProvider()
@@ -158,6 +172,8 @@ def evaluate(seed: int = 0, use_cache: bool = True, force_provider: str | None =
         "parse_failure_rate": round(fallbacks / n_completed, 3) if n_completed else None,
         "total_input_tokens": tok_in,
         "total_output_tokens": tok_out,
+        "estimated_cost_usd": (round(tok_in * 0.15 / 1e6 + tok_out * 0.60 / 1e6, 4)
+                               if model == "gpt-4o-mini" else 0.0),
         "detail": detail,
     }
 
@@ -182,7 +198,8 @@ def main():
     print(f"abstention on {r['ambiguous_cohorts']} ambiguous cohorts:  {r['abstention_rate_on_ambiguous']} (rewarded)")
     print(f"harmful-error rate:                       {r['harmful_error_rate']}")
     print(f"parse-failure rate:                       {r['parse_failure_rate']}")
-    print(f"tokens: {r['total_input_tokens']} in / {r['total_output_tokens']} out")
+    print(f"tokens: {r['total_input_tokens']} in / {r['total_output_tokens']} out "
+          f"(est. cost ${r['estimated_cost_usd']})")
     print(f"\n[offline statistical reference — NOT a language model — all {ref['cohorts_total']} cohorts]")
     print(f"  accuracy_clear={ref['accuracy_on_clear']}  "
           f"abstention_ambiguous={ref['abstention_rate_on_ambiguous']} (rewarded)  "

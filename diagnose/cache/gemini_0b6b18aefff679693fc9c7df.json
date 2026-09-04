@@ -1,1 +1,0 @@
-{"_provider": "gemini", "_tokens": [351, 73], "cause": "MERCHANT_INTEGRATION", "confidence": 0.94, "evidence": ["BAD_REQUEST_ERROR represents 61.3% of cohort failures vs 9.1% in baseline", "Massive relative elevation of malformed request errors", "Cohort size (80 failures) is sufficient to establish anomaly"]}

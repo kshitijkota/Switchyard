@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [474, 63], "cause": "CUSTOMER_SIDE", "confidence": 0.8, "evidence": ["U16 (risk rejected) at 29% vs baseline 26%", "U69 (insufficient funds) at 32% vs baseline 27%"]}

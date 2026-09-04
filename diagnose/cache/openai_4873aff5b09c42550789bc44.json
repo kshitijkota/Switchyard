@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [476, 69], "cause": "MERCHANT_INTEGRATION", "confidence": 0.9, "evidence": ["BAD_REQUEST_ERROR cohort share is 57%, significantly above baseline of 9%", "Other causes do not exceed their baseline shares", "No other cause is comparably large"]}

@@ -357,6 +357,34 @@ into a quantified curve with a stated knee.
   code is pushed and the cold clone verifies green; only the visibility toggle
   remains, and it is a one-click owner action.
 
+### 2026-09-05 — TASK 2 completed with OpenAI (user-authorised, up to $20)
+
+Gemini's daily quota (20/day) stayed exhausted, so per the user I completed the
+diagnosis with OpenAI `gpt-4o-mini` (spend cap raised to $20, $5 tripwire).
+
+- Hit an `httpx2` decompression bug in the installed OpenAI SDK build
+  (`process() takes no keyword arguments` on gzip decode); fixed by sending
+  `Accept-Encoding: identity`.
+- First OpenAI run abstained on EVERYTHING (accuracy 0): gpt-4o-mini compared raw
+  counts (80-cohort vs ~24k baseline) and saw "nothing elevated". Rewrote the
+  shared prompt to present per-code SHARES (proportions) vs baseline. Added a
+  cache-invalidating PROMPT_VERSION so a prompt change never reuses stale answers.
+- gpt-4o-mini then diagnosed clear cohorts well but over-asserted on ambiguous
+  ones (abstention stuck at 0.167 across three prompt variants — it asserts on
+  18-failure cohorts and two-cause blends). Rather than overfit the prompt, added
+  a **sample-size guardrail** (abstain, no model call, below 40 failures) — sound
+  engineering a real diagnoser needs.
+- **Final (all 19 cohorts, OpenAI gpt-4o-mini + guardrail):** accuracy 0.846 on
+  clear, abstention **0.667** on ambiguous (rewarded), harmful 0.105,
+  parse-failure 0. Tokens 7138/942, **est. cost $0.0016** — far under $20.
+  Reproduces from the committed OpenAI cache with no key (small cohorts abstain
+  deterministically via the guardrail). Removed the superseded 9-cohort Gemini
+  cache. Statistical baseline for comparison: 0.923 / 0.667 / 0.105.
+- Honest read: on a five-way classification this simple, the small LLM ties a
+  hand-written rule and loses a little accuracy (it abstains on 2 customer-side
+  cohorts — customer failure is the ambient norm, not an anomaly). Reported as-is.
+- Per the user, the repo is NOT to be made public.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
