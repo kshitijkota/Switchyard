@@ -205,8 +205,11 @@ def estimate_cell_values(
             V[:, p] = np.where(n_c > 0, model_term, np.nan)
 
         elif estimator == "ips":
+            cnt_p = np.bincount(ds.cell_idx[chose_p], minlength=N_CELLS)
             num = np.bincount(ds.cell_idx[chose_p], weights=(w * ds.reward)[chose_p], minlength=N_CELLS)
-            V[:, p] = np.where(n_c > 0, num / safe_nc, np.nan)
+            # nan (unknown), NOT 0, where the action was never tried in the cell —
+            # you cannot evaluate what you never tried.
+            V[:, p] = np.where(cnt_p > 0, num / safe_nc, np.nan)
 
         elif estimator == "snips":
             num = np.bincount(ds.cell_idx[chose_p], weights=(w * ds.reward)[chose_p], minlength=N_CELLS)
