@@ -136,8 +136,10 @@ def main() -> int:
               f"completed={diagnosis['cohorts_completed']}/{diagnosis['cohorts_total']}"
               f"{' (PARTIAL)' if diagnosis['partial_run'] else ''}")
         print(f"  accuracy_clear={diagnosis['accuracy_on_clear']} "
+              f"abstention_ambiguous={diagnosis['abstention_rate_on_ambiguous']} (rewarded) "
               f"harmful={diagnosis['harmful_error_rate']} parse_failure={diagnosis['parse_failure_rate']} "
-              f"tokens={diagnosis['total_input_tokens']}in/{diagnosis['total_output_tokens']}out")
+              f"tokens={diagnosis['total_input_tokens']}in/{diagnosis['total_output_tokens']}out "
+              f"est_cost=${diagnosis.get('estimated_cost_usd', 0)}")
     if diagnosis_stat:
         print(f"[§8 diagnosis — offline statistical reference, NOT an LLM] "
               f"accuracy_clear={diagnosis_stat['accuracy_on_clear']} "
