@@ -115,14 +115,36 @@ def merchant_glitch(context: Context, processor: str) -> bool:
     return context.method == "netbanking" and context.issuer == "icici"
 
 
-def _cause_mix(context: Context, processor: str) -> dict:
+def regime(context: Context, processor: str) -> str:
+    """The latent regime shaping this txn's failure-cause mixture. Precedence
+    matters: issuer degradation dominates, then merchant glitch, then network."""
     if is_issuer_degraded(context, processor):
-        return _ISSUER_MIX
+        return "issuer_degraded"
     if merchant_glitch(context, processor):
-        return _MERCHANT_MIX
+        return "merchant_glitch"
     if network_incident(context):
-        return _NETWORK_MIX
-    return _BASE_MIX
+        return "network_incident"
+    return "baseline"
+
+
+_REGIME_MIX = {
+    "issuer_degraded": _ISSUER_MIX,
+    "merchant_glitch": _MERCHANT_MIX,
+    "network_incident": _NETWORK_MIX,
+    "baseline": _BASE_MIX,
+}
+
+# The cause class each non-baseline regime is engineered to concentrate. Used by
+# the §8 diagnosis grader to label cohorts. 'baseline' has no dominant cause.
+REGIME_TRUE_CAUSE = {
+    "issuer_degraded": CAUSE_ISSUER,
+    "merchant_glitch": CAUSE_MERCHANT,
+    "network_incident": CAUSE_NETWORK,
+}
+
+
+def _cause_mix(context: Context, processor: str) -> dict:
+    return _REGIME_MIX[regime(context, processor)]
 
 
 def sample_outcome(context: Context, processor: str, rng: np.random.Generator):

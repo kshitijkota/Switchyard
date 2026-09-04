@@ -90,6 +90,18 @@ explicitly flags as tunable/loggable (§6.1, §12.4). The **robust** headline is
 the *estimation-error* column (§6.1): `direct`'s plug-in self-estimate is
 optimistically biased regardless. Will measure both and report honestly.
 
+### 2026-09-04 18:40 IST — Legacy policy + 200k logs (step 3)
+
+- 200,000 txns generated in ~4s; success rate 0.877; processor share
+  pa 0.55 / pb 0.15 / pc 0.30. Regime share: baseline 0.968, merchant_glitch
+  0.019, issuer_degraded 0.008, network_incident 0.006 (small but each yields
+  hundreds of failures for the §8 cohorts).
+- Confounding confirmed (coverage share by segment): high-amount → pb 0.96;
+  upi → pa 0.91, **pb 0.025** (near-zero); other → pc 0.85. So pb-on-upi and
+  pa/pc-on-high-amount are the starved cells.
+- Determinism verified: regenerating the same n twice is byte-identical for
+  both files. Cause class appears ONLY in ground_truth.jsonl, never in logs.
+
 ### Open questions
 
 - None blocking yet.
