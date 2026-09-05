@@ -1,1 +1,0 @@
-{"_provider": "openai", "_tokens": [479, 86], "cause": "MERCHANT_INTEGRATION", "confidence": 0.9, "evidence": ["BAD_REQUEST_ERROR cohort share is 35%, well above baseline of 9%", "GATEWAY_ERROR cohort share is 24%, above baseline of 12%", "U16 and U69 are below their respective baselines, indicating less customer-side issues"]}

@@ -1,16 +1,16 @@
 {
-  "abstained_on_clear": 1,
-  "abstention_rate_on_ambiguous": 0.667,
-  "accuracy_on_clear": 0.923,
-  "ambiguous_cohorts": 6,
+  "abstained_on_clear": 3,
+  "abstention_rate_on_ambiguous": 0.857,
+  "accuracy_on_clear": 0.769,
+  "ambiguous_cohorts": 7,
   "clear_cohorts": 13,
-  "cohorts_completed": 19,
+  "cohorts_completed": 20,
   "cohorts_skipped": 0,
-  "cohorts_total": 19,
+  "cohorts_total": 20,
   "detail": [
     {
       "cohort": "issuer_degraded cohort #1",
-      "confidence": 0.99,
+      "confidence": 0.84,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -18,7 +18,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #2",
-      "confidence": 0.99,
+      "confidence": 0.96,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -26,7 +26,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #3",
-      "confidence": 0.99,
+      "confidence": 0.87,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -34,7 +34,7 @@
     },
     {
       "cohort": "issuer_degraded cohort #4",
-      "confidence": 0.99,
+      "confidence": 0.86,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
@@ -42,7 +42,7 @@
     },
     {
       "cohort": "merchant_glitch cohort #1",
-      "confidence": 0.98,
+      "confidence": 0.99,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -74,7 +74,7 @@
     },
     {
       "cohort": "network_incident cohort #1",
-      "confidence": 0.98,
+      "confidence": 0.7,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "NETWORK_TRANSIENT",
@@ -82,34 +82,34 @@
     },
     {
       "cohort": "baseline cohort #1",
-      "confidence": 0.61,
-      "kind": "clear",
-      "n_failures": 80,
-      "predicted": "CUSTOMER_SIDE",
-      "true": "CUSTOMER_SIDE"
-    },
-    {
-      "cohort": "baseline cohort #2",
-      "confidence": 0.59,
-      "kind": "clear",
-      "n_failures": 80,
-      "predicted": "CUSTOMER_SIDE",
-      "true": "CUSTOMER_SIDE"
-    },
-    {
-      "cohort": "baseline cohort #3",
-      "confidence": 0.56,
-      "kind": "clear",
-      "n_failures": 80,
-      "predicted": "CUSTOMER_SIDE",
-      "true": "CUSTOMER_SIDE"
-    },
-    {
-      "cohort": "baseline cohort #4",
       "confidence": 0.4,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #2",
+      "confidence": 0.4,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #3",
+      "confidence": 0.4,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "CUSTOMER_SIDE"
+    },
+    {
+      "cohort": "baseline cohort #4",
+      "confidence": 0.59,
+      "kind": "clear",
+      "n_failures": 80,
+      "predicted": "CUSTOMER_SIDE",
       "true": "CUSTOMER_SIDE"
     },
     {
@@ -146,7 +146,7 @@
     },
     {
       "cohort": "network_incident+merchant_glitch even blend",
-      "confidence": 0.76,
+      "confidence": 0.77,
       "kind": "ambiguous",
       "n_failures": 80,
       "predicted": "MERCHANT_INTEGRATION",
@@ -154,16 +154,24 @@
     },
     {
       "cohort": "issuer_degraded+network_incident even blend",
-      "confidence": 0.81,
+      "confidence": 0.4,
       "kind": "ambiguous",
       "n_failures": 80,
-      "predicted": "ISSUER_DEGRADATION",
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "U30 debit-failure surge (ambiguous code)",
+      "confidence": 0.4,
+      "kind": "ambiguous",
+      "n_failures": 100,
+      "predicted": "INSUFFICIENT_EVIDENCE",
       "true": "INSUFFICIENT_EVIDENCE"
     }
   ],
   "estimated_cost_usd": 0.0,
   "fallback_note": null,
-  "harmful_error_rate": 0.105,
+  "harmful_error_rate": 0.05,
   "measured_by_language_model": false,
   "model": null,
   "parse_failure_rate": 0.0,

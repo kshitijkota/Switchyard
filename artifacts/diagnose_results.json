@@ -1,12 +1,12 @@
 {
-  "abstained_on_clear": 2,
-  "abstention_rate_on_ambiguous": 0.667,
+  "abstained_on_clear": 1,
+  "abstention_rate_on_ambiguous": 0.714,
   "accuracy_on_clear": 0.846,
-  "ambiguous_cohorts": 6,
+  "ambiguous_cohorts": 7,
   "clear_cohorts": 13,
-  "cohorts_completed": 19,
+  "cohorts_completed": 20,
   "cohorts_skipped": 0,
-  "cohorts_total": 19,
+  "cohorts_total": 20,
   "detail": [
     {
       "cohort": "issuer_degraded cohort #1",
@@ -74,7 +74,7 @@
     },
     {
       "cohort": "network_incident cohort #1",
-      "confidence": 0.9,
+      "confidence": 0.8,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "NETWORK_TRANSIENT",
@@ -82,7 +82,7 @@
     },
     {
       "cohort": "baseline cohort #1",
-      "confidence": 0.8,
+      "confidence": 0.7,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "CUSTOMER_SIDE",
@@ -90,26 +90,26 @@
     },
     {
       "cohort": "baseline cohort #2",
-      "confidence": 0.8,
+      "confidence": 0.0,
       "kind": "clear",
       "n_failures": 80,
-      "predicted": "CUSTOMER_SIDE",
+      "predicted": "INSUFFICIENT_EVIDENCE",
       "true": "CUSTOMER_SIDE"
     },
     {
       "cohort": "baseline cohort #3",
-      "confidence": 0.0,
+      "confidence": 0.8,
       "kind": "clear",
       "n_failures": 80,
-      "predicted": "INSUFFICIENT_EVIDENCE",
+      "predicted": "NETWORK_TRANSIENT",
       "true": "CUSTOMER_SIDE"
     },
     {
       "cohort": "baseline cohort #4",
-      "confidence": 0.0,
+      "confidence": 0.8,
       "kind": "clear",
       "n_failures": 80,
-      "predicted": "INSUFFICIENT_EVIDENCE",
+      "predicted": "CUSTOMER_SIDE",
       "true": "CUSTOMER_SIDE"
     },
     {
@@ -154,22 +154,30 @@
     },
     {
       "cohort": "issuer_degraded+network_incident even blend",
-      "confidence": 0.9,
+      "confidence": 0.8,
       "kind": "ambiguous",
       "n_failures": 80,
       "predicted": "ISSUER_DEGRADATION",
       "true": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "cohort": "U30 debit-failure surge (ambiguous code)",
+      "confidence": 0.5,
+      "kind": "ambiguous",
+      "n_failures": 100,
+      "predicted": "INSUFFICIENT_EVIDENCE",
+      "true": "INSUFFICIENT_EVIDENCE"
     }
   ],
-  "estimated_cost_usd": 0.0016,
+  "estimated_cost_usd": 0.0021,
   "fallback_note": null,
-  "harmful_error_rate": 0.105,
+  "harmful_error_rate": 0.15,
   "measured_by_language_model": true,
   "model": "gpt-4o-mini",
   "parse_failure_rate": 0.0,
   "partial_run": false,
   "provider": "openai (from committed cache)",
   "stop_reason": null,
-  "total_input_tokens": 7138,
-  "total_output_tokens": 942
+  "total_input_tokens": 9779,
+  "total_output_tokens": 1089
 }

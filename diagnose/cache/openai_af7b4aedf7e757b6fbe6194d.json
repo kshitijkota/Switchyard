@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [609, 85], "cause": "CUSTOMER_SIDE", "confidence": 0.7, "evidence": ["U69 (collect request expired) cohort share 28% vs baseline 26%", "U30 (debit failed) cohort share 11% vs baseline 13%", "Z9 (insufficient funds) cohort share 26% vs baseline 27%"]}

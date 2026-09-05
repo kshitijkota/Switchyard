@@ -3,7 +3,7 @@
 **Switchyard routes each payment to the processor that maximises expected net revenue, and — unlike a supervised model trained on confounded logs — spends a small, budgeted slice of randomly-routed traffic so its value estimates stay honest in the segments the old policy never explored.**
 
 > ## ⚠️ All data here is synthetic.
-> Every number below is produced by a simulator in this repository with **known, controlled latent ground truth** — no real payment data is used, and no claim is made about any production system. Reproduce everything with `python verify.py`. No figure is hand-written; each is emitted by a script (ABSOLUTE RULE: no number appears in any document unless a script here produced it).
+> Every number below is produced by a simulator in this repository with **known, controlled latent ground truth** — no real payment data is used, and no claim is made about any production system. Reproduce everything with `python verify.py`. No figure is hand-written; each is emitted by a script (ABSOLUTE RULE: no number appears in any document unless a script here produced it). *One thing is real:* the **failure codes and their documented meanings** are the published NPCI UPI and Razorpay error codes (see the diagnosis section and `DECISIONS.md`); the routing outcomes, success probabilities and costs attached to them are still simulated.
 
 ---
 
@@ -157,23 +157,26 @@ When a payment fails, the same routing brain decides whether and where to re-att
 
 A single contained job (never routes): given a cohort's failure-code counts and a baseline comparison, output structured JSON `{cause, confidence, evidence}` or abstain with `INSUFFICIENT_EVIDENCE`. Output is schema-validated with a fallback to `INSUFFICIENT_EVIDENCE` on any malformed response, and cached by input hash. A **sample-size guardrail** abstains deterministically (no model call) on cohorts below 40 failures — a production diagnoser must not attribute a cause from a handful of events. **Abstention is rewarded, not penalised**, because a calibrated "I don't know" is the correct answer for an un-diagnosable cohort and is strictly better than a confident wrong guess.
 
-**Measured by a real model — OpenAI `gpt-4o-mini` (temperature 0, strict JSON), all 19 cohorts complete.**
+**Real failure codes (what is real vs synthetic).** The failure codes and their documented meanings are **real**: the UPI path uses NPCI's published UPI response codes (`U28` bank/PSP down, `Z9` insufficient funds, `U69` collect-expired, `U30` "debit failed — bank down **or** debit issue"), the card/netbanking path uses Razorpay's documented error codes (`BAD_REQUEST_ERROR`, `GATEWAY_ERROR`, `SERVER_ERROR`); sources and retrieval dates are in `DECISIONS.md`. Everything else — routing outcomes, success probabilities and costs — remains **simulated** with known latent ground truth. `U30` is **genuinely ambiguous** (its own published text names two causes), emitted from both issuer and network failures, so a U30-dominated cohort is un-diagnosable and the correct answer is `INSUFFICIENT_EVIDENCE`.
 
-| Metric (OpenAI gpt-4o-mini, all 19 cohorts) | Value |
-|---|---:|
-| Accuracy on clear cohorts | **0.846** |
-| Abstention rate on ambiguous cohorts (rewarded) | **0.667** |
-| Harmful-error rate (a wrong assertion) | 0.105 |
-| Parse-failure rate | 0.000 |
-| Total tokens / estimated cost | 7,138 in / 942 out — **$0.0016** |
+**Measured by a real model — OpenAI `gpt-4o-mini` (temperature 0, strict JSON), all 20 cohorts complete.**
 
-What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every issuer / merchant / network cohort (a clearly-elevated code family); it abstains on the 4 tiny cohorts (via the guardrail) and on 2 of 4 customer-side cohorts — a *defensible* abstention, since customer-side failure is the ambient baseline, not an anomaly ("is this a cause or just normal attrition?"). Its only genuine errors are on the 2 constructed **two-cause blends**, where it names the larger cause instead of abstaining (the 0.105 harmful rate) — the hardest, most ambiguous cohorts.
+| Metric (all 20 cohorts) | gpt-4o-mini | offline rule (not an LLM) |
+|---|---:|---:|
+| Accuracy on clear cohorts (13) | **0.846** (11/13) | 0.769 (10/13) |
+| Abstention on ambiguous cohorts (7, rewarded) | 0.714 (5/7) | **0.857** (6/7) |
+| Harmful-error rate (a wrong assertion) | 0.150 (3/20) | **0.050** (1/20) |
+| Parse-failure rate | 0.000 | 0.000 |
 
-**Baseline comparison — deterministic offline statistical diagnoser, NOT a language model** (all 19 cohorts): accuracy **0.923**, abstention **0.667**, harmful **0.105**. The small LLM roughly matches a hand-written rule here — an honest finding: this five-way classification is simple enough that a good rule is hard to beat, and gpt-4o-mini's edge (natural-language evidence, no threshold tuning) does not translate into a higher score on it. These offline numbers are **not** presented as language-model performance.
+**Both correctly abstain on the genuinely-ambiguous `U30` cohort** — the code names two causes, and neither the model nor the rule invents one. That is the headline of the real-code change.
 
-**Earlier attempt (Gemini):** the run first used Gemini `gemini-3.8-flash`, which diagnosed its clear cohorts at accuracy 1.0 but hit the free tier's `PerDayPerProjectPerModel` cap of **20 requests/day** after 9 cohorts; per the design it stopped rather than burn the quota, and OpenAI (user-authorised, up to $20) completed the run.
+Beyond that, neither wins outright, and the result is more interesting than the earlier invented-code version (which had the rule ahead 0.923 vs 0.846):
+- **gpt-4o-mini** is more willing to name a cause: it diagnoses every issuer / merchant / network cohort and 2 of 4 customer-baseline cohorts correctly (higher clear-accuracy, 0.846). But that willingness costs it — it **over-asserts on the two constructed two-cause blends** (confidently names the larger cause) and makes one wrong call on a baseline window, for a **0.15 harmful rate**.
+- the **offline rule** is more cautious: it abstains on 3 of 4 baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is defensible) — which *lowers* its clear-accuracy to 0.769 — but that caution gives it the **higher ambiguous-abstention (0.857) and the lower harmful rate (0.050)**.
 
-**Disclosure:** provider OpenAI, model `gpt-4o-mini`; 7,138 input / 942 output tokens; **estimated cost $0.0016** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Anthropic path stays selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
+So on this closed-world, real-code task the two trade off (the LLM names more but errs more; the rule errs less but names less) rather than one dominating. The offline numbers are **not** presented as language-model performance. That the comparison is this close on a fixed six-code lookup is exactly what motivates the open-world test in TASK C.
+
+**Disclosure:** provider OpenAI, model `gpt-4o-mini`; 9,779 input / 1,089 output tokens; **estimated cost $0.0021** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Gemini and Anthropic paths stay selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
 
 ---
 
@@ -184,7 +187,7 @@ What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every is
 3. **The simulator models each attempt as an independent draw** (no failure persistence), so absolute recovery counts (3,489/5,000) are optimistic; the *incremental-over-legacy* metric, which is headlined, is unaffected.
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
-6. **The LLM diagnosis roughly matches a hand-written rule** (0.846 vs 0.923 accuracy; identical 0.667 abstention / 0.105 harmful): the five-way classification is simple enough that gpt-4o-mini's reasoning does not beat a deterministic rule, and it still over-asserts on genuinely-mixed cohorts. A larger model would likely handle the blends better.
+6. **On the closed-world, real-code diagnosis task the LLM and a hand-written rule trade off, neither dominating** (gpt-4o-mini 0.846 clear-accuracy / 0.15 harmful vs the rule's 0.769 / 0.05): both correctly abstain on the genuinely-ambiguous `U30` code, the LLM names more causes but over-asserts on the two-cause blends, and the rule is more cautious but abstains on baseline windows. A fixed six-code lookup is close enough to a small LLM that the *closed-world* test cannot separate them — which is what TASK C's open-world test is for.
 7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It does **not pull ahead of** `bygari_baseline` in the live race — the two are statistically indistinguishable (the difference CI includes zero); a model-based online learner might do better, but that was not the committed design and is not claimed.
 8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
@@ -197,7 +200,7 @@ pip install -r requirements.txt
 python verify.py          # runs tests, regenerates every artifact, reprints every number above (~5 min: includes the 500k live experiment)
 ```
 
-`verify.py` exits non-zero on any failure and is deterministic on fixed seeds (byte-identical logs/tables, enforced by `tests/test_determinism.py`). The diagnosis numbers reproduce from the committed Gemini cache with **no API key**; set `GEMINI_API_KEY` (see `.env.example`) to complete the remaining cohorts after the daily quota resets.
+`verify.py` exits non-zero on any failure and is deterministic on fixed seeds (byte-identical logs/tables, enforced by `tests/test_determinism.py`). The diagnosis numbers reproduce from the committed OpenAI `gpt-4o-mini` cache with **no API key**; set `OPENAI_API_KEY` or `GEMINI_API_KEY` (see `.env.example`) to re-run the model live.
 
 ---
 
@@ -206,6 +209,7 @@ python verify.py          # runs tests, regenerates every artifact, reprints eve
 The routing machinery here is established; **this project's contribution is the evaluation layer** — measuring when a model trained on logged routing decisions can and cannot be trusted, and pricing the exploration that fixes it.
 
 - **Razorpay's published router** — Bygari et al., *"An AI-powered Smart Routing Solution for Payment Systems,"* IEEE Big Data 2021 — **reimplemented here as `bygari_baseline`** (static eligibility + LR downtime breaker; dynamic RF success-router with time-decay feedback) and run head-to-head above.
+- **Failure codes** — NPCI *UPI Error and Response Codes* (v2.9) and Razorpay's documented payment error codes are used verbatim for the failure taxonomy (see `DECISIONS.md` for URLs and retrieval dates); only the codes and meanings are real, the outcomes remain simulated.
 - **PayU** — payment success-rate routing, WWW 2018.
 - **Juspay** — payment orchestration / smart routing (industry).
 - **Adyen** — contextual-bandit payment routing, arXiv:2412.00569.
