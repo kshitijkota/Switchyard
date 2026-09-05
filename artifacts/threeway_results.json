@@ -461,7 +461,7 @@
     }
   },
   "llm_model": "gpt-4o-mini",
-  "llm_provider": "openai (live)",
+  "llm_provider": "openai (from committed cache)",
   "open": {
     "llm": {
       "abstention_on_ambiguous_incl_guardrail": 0.5,
