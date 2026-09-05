@@ -129,33 +129,37 @@ def run() -> dict:
 
 
 def make_plot(result: dict, out_png: str = PNG_PATH) -> str:
-    import matplotlib
-    matplotlib.use("Agg")
+    from sim import plotstyle as ps
     import matplotlib.pyplot as plt
     eps = [p["epsilon"] for p in result["points"]]
     err_adv = [p["estimation_error_adversarial"]["error"] for p in result["points"]]
     err_st = [p["estimation_error_starved"]["error"] for p in result["points"]]
     cost = [p["exploration_cost_per_1k"]["value"] for p in result["points"]]
 
-    fig, ax1 = plt.subplots(figsize=(8, 5))
-    ax1.plot(eps, err_adv, "o-", color="#c65a2e", lw=2, label="estimation error — adversarial policy")
-    ax1.plot(eps, err_st, "s-", color="#b5651d", lw=2, label="estimation error — starved policy")
-    ax1.axhline(0, color="#000", lw=0.6)
-    ax1.set_xlabel("ε (fraction of decisions randomised)")
-    ax1.set_ylabel("estimation error (₹/1k, →0 is honest)", color="#c65a2e")
-    ax1.tick_params(axis="y", labelcolor="#c65a2e")
+    fig, ax1 = ps.new_fig(8.8, 5.0)
+    ax1.axhline(0, color=ps.FAINT, lw=1.2)
+    ax1.axvline(0.03, color=ps.GREEN, ls="--", lw=1.4, alpha=0.7)
+    ax1.annotate("knee: ε ≈ 0.03\nerror ~0 at modest cost", xy=(0.03, err_st[2]),
+                 xytext=(0.038, 900), fontsize=9.5, color=ps.GREEN)
+    ax1.plot(eps, err_adv, "o-", color=ps.BYGARI, lw=2.6, ms=6, label="estimation error — adversarial policy")
+    ax1.plot(eps, err_st, "s-", color=ps.GOLD, lw=2.6, ms=6, label="estimation error — starved policy")
+    ax1.set_xlabel("ε  (fraction of decisions randomised)")
+    ax1.set_ylabel("estimation error (₹/1k · 0 = honest)")
 
     ax2 = ax1.twinx()
-    ax2.plot(eps, cost, "^--", color="#2f6db3", lw=2, label="exploration cost (₹/1k)")
-    ax2.set_ylabel("exploration cost (₹/1k)", color="#2f6db3")
-    ax2.tick_params(axis="y", labelcolor="#2f6db3")
+    ax2.spines["top"].set_visible(False)
+    ax2.grid(False)
+    ax2.tick_params(length=0, colors=ps.SWITCHYARD)
+    ax2.plot(eps, cost, "^--", color=ps.SWITCHYARD, lw=2.4, ms=7, label="exploration cost (₹/1k)")
+    ax2.set_ylabel("exploration cost (₹/1k)", color=ps.SWITCHYARD)
 
-    ax1.set_title("Exploration price curve — honesty bought vs rupees spent")
     l1, la1 = ax1.get_legend_handles_labels()
     l2, la2 = ax2.get_legend_handles_labels()
-    ax1.legend(l1 + l2, la1 + la2, loc="center right", fontsize=9)
-    fig.tight_layout()
-    fig.savefig(out_png, dpi=110, metadata={"Software": "switchyard"})
+    ax1.legend(l1 + l2, la1 + la2, loc="center left", bbox_to_anchor=(0.02, 0.42))
+    ps.titled(ax1, "The price of an honest estimate",
+              "randomising a few percent of routing zeroes the estimation error; beyond the knee you pay more for nothing")
+    fig.subplots_adjust(top=0.84, left=0.10, right=0.90, bottom=0.12)
+    fig.savefig(out_png, metadata=ps.METADATA)
     plt.close(fig)
     return out_png
 

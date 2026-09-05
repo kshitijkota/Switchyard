@@ -209,38 +209,62 @@ def run_cell(epsilon, seeds, n_per_seed) -> dict:
 
 
 def make_plots(cell03: dict):
-    import matplotlib
-    matplotlib.use("Agg")
+    from sim import plotstyle as ps
     import matplotlib.pyplot as plt
-    grid = cell03["grid"]
+    eps = cell03.get("epsilon", 0.03)
+    grid = np.array(cell03["grid"])
     mb = np.array(cell03["cum_b_mean"]); ms = np.array(cell03["cum_s_mean"])
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(grid, mb, color="#c65a2e", lw=2, label="bygari_baseline (cumulative)")
-    ax.plot(grid, ms, color="#2f6db3", lw=2, label="switchyard, net of exploration")
-    ax.set_xlabel("transactions processed (per seed)")
-    ax.set_ylabel("cumulative net revenue (₹, mean over 40 seeds)")
-    ax.set_title("Cumulative net revenue — bygari_baseline vs switchyard (ε=0.03, 40 seeds)")
-    ax2 = ax.twinx()
-    ax2.plot(grid, ms - mb, color="#4c9a52", ls="--", lw=1.5, label="switchyard − bygari (right)")
-    ax2.axhline(0, color="#888", lw=0.8)
-    ax2.set_ylabel("difference (₹): switchyard − bygari", color="#4c9a52")
-    ax2.tick_params(axis="y", labelcolor="#4c9a52")
+    diff = ms - mb
     dm = cell03["diff_switchyard_minus_bygari"]
-    tag = "indistinguishable (CI crosses 0)" if dm["indistinguishable"] else "distinguishable"
-    ax2.annotate(f"final diff ₹{dm['mean']:,.0f} — {tag}\ncrossover: {cell03['crossover_txn']}",
-                 xy=(grid[len(grid)//3], (ms - mb).min()), fontsize=9, color="#2a6a30")
-    l1, la1 = ax.get_legend_handles_labels(); l2, la2 = ax2.get_legend_handles_labels()
-    ax.legend(l1 + l2, la1 + la2, loc="upper left", fontsize=8); ax.grid(True, alpha=0.25)
-    fig.tight_layout(); fig.savefig(os.path.join(ART, "cumulative_value.png"), dpi=110, metadata={"Software": "switchyard"})
+
+    # ---- cumulative value: trajectories (top) + signed difference (bottom) -----
+    ps.apply_style()
+    fig, (axt, axb) = plt.subplots(
+        2, 1, figsize=(8.8, 6.4), sharex=True,
+        gridspec_kw={"height_ratios": [2.4, 1.0], "hspace": 0.16})
+    ps.despine(axt); ps.despine(axb)
+    axt.plot(grid, mb, color=ps.BYGARI, lw=3.2, alpha=0.9, label="bygari_baseline", solid_capstyle="round")
+    axt.plot(grid, ms, color=ps.SWITCHYARD, lw=1.8, label="switchyard (net of exploration)")
+    axt.set_ylabel("cumulative net revenue\n(₹/seed, mean of 40 seeds)")
+    ps.thousands(axt, "y")
+    axt.legend(loc="upper left", handlelength=1.6)
+    axt.margins(x=0.01)
+    ps.titled(axt, "Neck and neck over 50k transactions",
+              f"bygari_baseline vs online switchyard · ε={eps} · 40 seeds, common random numbers")
+
+    axb.axhline(0, color=ps.FAINT, lw=1.2, zorder=1)
+    axb.plot(grid, diff, color=ps.INK, lw=1.8, zorder=3)
+    axb.fill_between(grid, diff, 0, where=(diff >= 0), color=ps.GREEN, alpha=0.18, zorder=2)
+    axb.fill_between(grid, diff, 0, where=(diff < 0), color=ps.RED, alpha=0.18, zorder=2)
+    ps.thousands(axb, "y")
+    axb.set_ylabel("switchyard − bygari (₹)")
+    axb.set_xlabel("transactions processed (per seed)")
+    tag = "indistinguishable — 95% CI crosses zero" if dm["indistinguishable"] else "distinguishable"
+    xo = cell03.get("crossover_txn")
+    axb.annotate(f"final Δ ₹{dm['mean']:,.0f}  ·  {tag}\ncrossover: {'none within 50k' if not xo else f'{xo:,} txns'}",
+                 xy=(grid[-1], diff[-1]), xytext=(-8, 10), textcoords="offset points",
+                 ha="right", va="bottom", fontsize=9.5, color=ps.MUTED)
+    fig.subplots_adjust(top=0.86, left=0.13, right=0.97, bottom=0.10)
+    fig.savefig(os.path.join(ART, "cumulative_value.png"), metadata=ps.METADATA)
     plt.close(fig)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(grid, cell03["starved_b_mean"], color="#c65a2e", lw=2, label="bygari_baseline")
-    ax.plot(grid, cell03["starved_s_mean"], color="#2f6db3", lw=2, label="switchyard")
+
+    # ---- starved-region traffic share -----------------------------------------
+    fig, ax = ps.new_fig(8.8, 5.0)
+    sb = np.array(cell03["starved_b_mean"]); ss = np.array(cell03["starved_s_mean"])
+    ax.plot(grid, sb, color=ps.BYGARI, lw=2.6, label="bygari_baseline")
+    ax.plot(grid, ss, color=ps.SWITCHYARD, lw=2.6, label="switchyard")
+    for y, c, txt in ((sb[-1], ps.BYGARI, f"{sb[-1]:.0%}"), (ss[-1], ps.SWITCHYARD, f"{ss[-1]:.0%}")):
+        ax.annotate(txt, xy=(grid[-1], y), xytext=(8, 0), textcoords="offset points",
+                    va="center", ha="left", fontsize=10, fontweight="bold", color=c)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _p: f"{v:.0%}"))
     ax.set_xlabel("transactions processed (per seed)")
-    ax.set_ylabel("share of large-ticket (>₹5k) traffic sent to pa/pc")
-    ax.set_title("Traffic to the starved large-ticket options (ε=0.03, 40 seeds)")
-    ax.legend(); ax.grid(True, alpha=0.25); fig.tight_layout()
-    fig.savefig(os.path.join(ART, "starved_region_traffic.png"), dpi=110, metadata={"Software": "switchyard"})
+    ax.set_ylabel("share of large-ticket (>₹5k) traffic\nrouted to pa / pc")
+    ax.margins(x=0.02); ax.set_xlim(left=0)
+    ax.legend(loc="center right")
+    ps.titled(ax, "Where the large-ticket traffic goes",
+              f"bygari routes more into the starved options; switchyard pulls away · ε={eps}, 40 seeds")
+    fig.subplots_adjust(top=0.84, left=0.13, right=0.90, bottom=0.12)
+    fig.savefig(os.path.join(ART, "starved_region_traffic.png"), metadata=ps.METADATA)
     plt.close(fig)
 
 
