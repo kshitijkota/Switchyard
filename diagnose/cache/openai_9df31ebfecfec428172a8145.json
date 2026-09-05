@@ -1,1 +1,0 @@
-{"_provider": "openai", "_tokens": [616, 70], "cause": "INSUFFICIENT_EVIDENCE", "confidence": 0.0, "evidence": ["U30 code is ambiguous with two possible causes.", "U30 dominates the cohort but does not provide a clear cause.", "No other cause clearly stands out above baseline."]}

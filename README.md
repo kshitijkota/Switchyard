@@ -176,6 +176,28 @@ Beyond that, the closed-world result with **real** codes matches the earlier inv
 
 ---
 
+## Where semantics actually matter: an open-world test (rule vs trained model vs LLM)
+
+The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is real but says little — six documented codes and five fixed categories are a lookup, not an interpretation. So we add a **held-out open-world set** the rule cannot be pre-written for, and a **third method** — a small trained classifier (multinomial logistic regression on documented-code shares) — that sits between the rule and the LLM. The open-world cohorts (labels fixed before any method ran) contain: **real NPCI/Razorpay codes withheld** from the table and the classifier's training (`Z8`, `U16`, `bank_not_available`, `psp_app_not_available`, `gateway_technical_error`); **free-text gateway messages** with no code; a **red herring** (the ambiguous `U30` dominates, the true signal is a minority code); and **two-cause blends**.
+
+**Prediction, stated before the results (as required):** rules and trained models should **win closed-world and fail open-world** (they can only match patterns they were given); the LLM should **lose closed-world and generalise open-world** (it can interpret an unfamiliar code or a free-text message from world knowledge).
+
+**What actually happened** — accuracy on clear cohorts (harmful-error rate in parentheses):
+
+| Method | Closed-world | Open-world |
+|---|---:|---:|
+| Hand-written rule | 0.923 (0.10) | **0.000** (0.10) |
+| Trained classifier (LR on code shares) | **1.000** (0.00) | 0.125 (0.40) |
+| LLM (gpt-4o-mini) | 0.846 (0.10) | **0.625** (0.30) |
+
+**The prediction held.** Closed-world, the trained classifier is perfect (1.000) and the rule strong (0.923) — both beat the LLM (0.846). Open-world, both collapse and the **LLM is the only method that generalises** (0.625 vs 0.000 / 0.125): it reads `bank_not_available`, `Z8` and every free-text cohort correctly from knowledge it was never given in a table. And the two failures are different in a way that mirrors this whole project: the **rule fails safe** — it abstains (0.0 accuracy, but only 0.10 harmful), correctly refusing to interpret codes it doesn't recognise; the **trained model fails dangerously** — it extrapolates its closed-world mapping onto inputs it never saw and asserts a **confident wrong cause 40% of the time** (0.40 harmful), the same optimism-under-distribution-shift that the routing half of this project is about. The LLM is not clean either (0.30 harmful — it misreads `psp_app_not_available` and `gateway_technical_error` as customer-side, and over-asserts on one blend), and it does **not** win closed-world. Reported as measured; no scenarios were added after seeing results.
+
+**Abstention attribution (C3).** The diagnoser's headline abstention is mostly deterministic engineering, not model judgment. On the closed-world ambiguous cohorts the model abstains **0.714 including the sample-size guardrail**, but **4 of those 5 abstentions are the guardrail** — a hard "abstain below 40 failures, no model call" gate. The model's **own** abstention, on the cohorts that actually reached it, is **0.188** (3 of 16). The guardrail was added deliberately after three prompt variants failed to move the number (the model kept asserting on tiny cohorts, abstention stuck at 0.167); it is deterministic engineering and is labelled as such, never presented as model behaviour.
+
+*Reproduce:* `python -m diagnose.threeway` (rule and trained classifier need no key; the LLM reproduces from the committed OpenAI cache). All open-world inputs are synthetic; only the withheld codes and their meanings are real.
+
+---
+
 ## Known limitations (real, unsmoothed)
 
 1. **The naive model does not simply "fail."** A well-regularised GBM is a strong, robust *policy* on smooth latent structure — it beats the off-policy estimators on true value. The failure this project demonstrates is *epistemic and conditional on coverage*: `direct` cannot tell a good policy from a money-loser in the region it never explored, and overstates any policy that ventures there.

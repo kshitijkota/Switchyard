@@ -1,0 +1,716 @@
+{
+  "closed": {
+    "llm": {
+      "abstention_on_ambiguous_incl_guardrail": 0.714,
+      "accuracy_on_clear": 0.846,
+      "ambiguous_cohorts": 7,
+      "clear_cohorts": 13,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #1",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #2",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #3",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #4",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #1",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #2",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #3",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #4",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident cohort #1",
+          "kind": "clear",
+          "predicted": "NETWORK_TRANSIENT",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #1",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #2",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #3",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #4",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "issuer_degraded tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "network_incident tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "merchant_glitch tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "baseline tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident+merchant_glitch even blend",
+          "kind": "ambiguous",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded+network_incident even blend",
+          "kind": "ambiguous",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "U30 debit-failure surge (ambiguous code)",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 4,
+      "harmful_error_rate": 0.1,
+      "model_abstentions": 3,
+      "model_own_abstention_rate": 0.188,
+      "n_cohorts": 20
+    },
+    "rule": {
+      "abstention_on_ambiguous_incl_guardrail": 0.714,
+      "accuracy_on_clear": 0.923,
+      "ambiguous_cohorts": 7,
+      "clear_cohorts": 13,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #1",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #2",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #3",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #4",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #1",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #2",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #3",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #4",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident cohort #1",
+          "kind": "clear",
+          "predicted": "NETWORK_TRANSIENT",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #1",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #2",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #3",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #4",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "issuer_degraded tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "network_incident tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "merchant_glitch tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "baseline tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident+merchant_glitch even blend",
+          "kind": "ambiguous",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded+network_incident even blend",
+          "kind": "ambiguous",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "U30 debit-failure surge (ambiguous code)",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 4,
+      "harmful_error_rate": 0.1,
+      "model_abstentions": 2,
+      "model_own_abstention_rate": 0.125,
+      "n_cohorts": 20
+    },
+    "trained": {
+      "abstention_on_ambiguous_incl_guardrail": 1.0,
+      "accuracy_on_clear": 1.0,
+      "ambiguous_cohorts": 7,
+      "clear_cohorts": 13,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #1",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #2",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #3",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded cohort #4",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #1",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #2",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #3",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "merchant_glitch cohort #4",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident cohort #1",
+          "kind": "clear",
+          "predicted": "NETWORK_TRANSIENT",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #1",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #2",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #3",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "baseline cohort #4",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "issuer_degraded tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "network_incident tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "merchant_glitch tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": "guardrail",
+          "cohort": "baseline tiny sample",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "network_incident+merchant_glitch even blend",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "issuer_degraded+network_incident even blend",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "U30 debit-failure surge (ambiguous code)",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 4,
+      "harmful_error_rate": 0.0,
+      "model_abstentions": 3,
+      "model_own_abstention_rate": 0.188,
+      "n_cohorts": 20
+    }
+  },
+  "llm_model": "gpt-4o-mini",
+  "llm_provider": "openai (live)",
+  "open": {
+    "llm": {
+      "abstention_on_ambiguous_incl_guardrail": 0.5,
+      "accuracy_on_clear": 0.625,
+      "ambiguous_cohorts": 2,
+      "clear_cohorts": 8,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: bank_not_available surge",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: PSP-handle outage",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: per-txn bank limit (Z8)",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: gateway_technical_error",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: issuer-unavailable messages",
+          "kind": "clear",
+          "predicted": "ISSUER_DEGRADATION",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: acquirer timeouts",
+          "kind": "clear",
+          "predicted": "NETWORK_TRANSIENT",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: malformed-request messages",
+          "kind": "clear",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "red herring: U30-dominant, network minority",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "blend: withheld-issuer + merchant",
+          "kind": "ambiguous",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: vague / uninformative",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 0,
+      "harmful_error_rate": 0.3,
+      "model_abstentions": 2,
+      "model_own_abstention_rate": 0.2,
+      "n_cohorts": 10
+    },
+    "rule": {
+      "abstention_on_ambiguous_incl_guardrail": 0.5,
+      "accuracy_on_clear": 0.0,
+      "ambiguous_cohorts": 2,
+      "clear_cohorts": 8,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: bank_not_available surge",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: PSP-handle outage",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: per-txn bank limit (Z8)",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: gateway_technical_error",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: issuer-unavailable messages",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: acquirer timeouts",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: malformed-request messages",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "red herring: U30-dominant, network minority",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "blend: withheld-issuer + merchant",
+          "kind": "ambiguous",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: vague / uninformative",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 0,
+      "harmful_error_rate": 0.1,
+      "model_abstentions": 9,
+      "model_own_abstention_rate": 0.9,
+      "n_cohorts": 10
+    },
+    "trained": {
+      "abstention_on_ambiguous_incl_guardrail": 0.5,
+      "accuracy_on_clear": 0.125,
+      "ambiguous_cohorts": 2,
+      "clear_cohorts": 8,
+      "detail": [
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: bank_not_available surge",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: PSP-handle outage",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: per-txn bank limit (Z8)",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "CUSTOMER_SIDE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "withheld: gateway_technical_error",
+          "kind": "clear",
+          "predicted": "CUSTOMER_SIDE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: issuer-unavailable messages",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "ISSUER_DEGRADATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: acquirer timeouts",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: malformed-request messages",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "MERCHANT_INTEGRATION"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "red herring: U30-dominant, network minority",
+          "kind": "clear",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "NETWORK_TRANSIENT"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "blend: withheld-issuer + merchant",
+          "kind": "ambiguous",
+          "predicted": "MERCHANT_INTEGRATION",
+          "true": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "abstain_kind": null,
+          "cohort": "free-text: vague / uninformative",
+          "kind": "ambiguous",
+          "predicted": "INSUFFICIENT_EVIDENCE",
+          "true": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "guardrail_abstentions": 0,
+      "harmful_error_rate": 0.4,
+      "model_abstentions": 5,
+      "model_own_abstention_rate": 0.5,
+      "n_cohorts": 10
+    }
+  }
+}

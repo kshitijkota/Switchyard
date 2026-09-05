@@ -89,6 +89,14 @@ def main() -> int:
             json.dump(r, fh, indent=2, sort_keys=True)
         return r
 
+    from diagnose.threeway import evaluate as threeway_eval, RESULTS_PATH as TW_PATH
+
+    def _threeway():
+        r = threeway_eval()
+        with open(TW_PATH, "w") as fh:
+            json.dump(r, fh, indent=2, sort_keys=True)
+        return r
+
     curve = guard("exploration price curve", _expl)
 
     from eval.live_experiment import run_cell as live_cell, make_plots as live_plots, SEEDS, N_PER_SEED
@@ -111,6 +119,7 @@ def main() -> int:
     recovery = guard("recovery evaluation", rec_eval)
     diagnosis = guard("diagnosis (gemini/committed cache)", _diag)
     diagnosis_stat = guard("diagnosis statistical reference", _diag_stat)
+    threeway = guard("open-world three-way (rule/trained/LLM × closed/open)", _threeway)
 
     # held-out regime is run ONCE (RULE 5); read the committed artifact, never re-run.
     heldout = None
@@ -187,6 +196,17 @@ def main() -> int:
               f"accuracy_clear={diagnosis_stat['accuracy_on_clear']} "
               f"abstention_ambiguous={diagnosis_stat['abstention_rate_on_ambiguous']} (rewarded) "
               f"harmful={diagnosis_stat['harmful_error_rate']}")
+    if threeway:
+        print("\n[TASK C open-world — accuracy on clear (harmful) by method × world]")
+        for m in ("rule", "trained", "llm"):
+            cw, ow = threeway["closed"][m], threeway["open"][m]
+            print(f"    {m:8s}  closed {cw['accuracy_on_clear']} ({cw['harmful_error_rate']})   "
+                  f"open {ow['accuracy_on_clear']} ({ow['harmful_error_rate']})")
+        llm_c = threeway["closed"]["llm"]
+        print(f"  [C3] LLM closed abstention incl-guardrail "
+              f"{llm_c['abstention_on_ambiguous_incl_guardrail']}; model-own "
+              f"{llm_c['model_own_abstention_rate']} (guardrail={llm_c['guardrail_abstentions']}, "
+              f"model={llm_c['model_abstentions']})")
     if heldout:
         print("\n[§6.1 held-out regime — read from the run-once artifact, not re-run]")
         print(f"  legacy {heldout['legacy_baseline_value']}  oracle {heldout['oracle_value']} ₹/1k")

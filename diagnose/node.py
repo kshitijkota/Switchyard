@@ -36,7 +36,7 @@ _ROOT = os.path.dirname(os.path.dirname(__file__))
 CACHE_DIR = os.path.join(_ROOT, "diagnose", "cache")
 INCIDENT_LOG = os.path.join(_ROOT, "diagnose", "cache", "incidents.log")
 LLM_MODEL = os.environ.get("SWITCHYARD_DIAGNOSE_MODEL", "claude-opus-5")
-PROMPT_VERSION = "v5-real-codes-ambiguous"   # bump to invalidate the cache when build_prompt or the code set changes
+PROMPT_VERSION = "v6-openworld"   # bump to invalidate the cache when build_prompt or the code set changes
 MIN_COHORT_FAILURES = 40   # sample-size guardrail: below this the diagnoser abstains
 
 
@@ -89,8 +89,17 @@ def max_rpm() -> int:
 class DiagnosisInput:
     cohort_label: str
     window: str
-    cohort_counts: dict          # code -> count in the cohort
-    baseline_counts: dict        # code -> count in the comparison baseline
+    cohort_counts: dict          # KNOWN code -> count in the cohort
+    baseline_counts: dict        # KNOWN code -> count in the comparison baseline
+    # Open-world extras (TASK C). `unknown_codes` are real codes NOT in the
+    # documented table (a lookup rule cannot map them); `messages` are free-text
+    # gateway strings with no code at all. Both are empty for closed-world cohorts.
+    unknown_codes: dict = field(default_factory=dict)
+    messages: tuple = ()
+
+    def total_failures(self) -> int:
+        return (sum(self.cohort_counts.values()) + sum(self.unknown_codes.values())
+                + len(self.messages))
 
     def canonical(self) -> dict:
         return {
@@ -98,6 +107,8 @@ class DiagnosisInput:
             "window": self.window,
             "cohort_counts": {k: int(self.cohort_counts.get(k, 0)) for k in sorted(CODE_MEANING)},
             "baseline_counts": {k: int(self.baseline_counts.get(k, 0)) for k in sorted(CODE_MEANING)},
+            "unknown_codes": {k: int(v) for k, v in sorted(self.unknown_codes.items())},
+            "messages": list(self.messages),
         }
 
     def hash(self) -> str:
@@ -140,13 +151,32 @@ def build_prompt(inp: "DiagnosisInput") -> str:
         rows.append(f"  {code} ({meaning} → {cause}): cohort {cc[code]/n_c:.0%} "
                     f"({cc[code]}/{n_c}) vs baseline {bc[code]/n_b:.0%}")
     table = "\n".join(rows)
+    # Open-world extras (TASK C): real codes not in the documented table, and
+    # free-text gateway messages. These carry no pre-mapped cause — the model must
+    # interpret them from its own knowledge of payments error semantics.
+    extra = ""
+    if inp.unknown_codes:
+        uk = "\n".join(f"  {code}: {cnt} ({cnt/(inp.total_failures() or 1):.0%} of cohort)"
+                       for code, cnt in sorted(inp.unknown_codes.items()))
+        extra += ("\nAdditional failure codes NOT in the table above (no cause is pre-assigned; "
+                  "use your own knowledge of NPCI/Razorpay payment error codes to interpret them):\n"
+                  f"{uk}\n")
+    if inp.messages:
+        ms = "\n".join(f"  - \"{m}\"" for m in inp.messages)
+        extra += ("\nFree-text gateway messages from this cohort (no structured code; read them and "
+                  "infer the cause):\n" f"{ms}\n")
+    if extra:
+        extra += ("\nThe cohort's real signal may be in these untabled codes or free-text messages "
+                  "rather than the documented table above — interpret them from your own knowledge "
+                  "of payment-error semantics before deciding.\n")
     return (
         "You are a payments failure-diagnosis service. Given a cohort of failed "
         "transactions and an all-time baseline, decide the single most likely "
         "underlying CAUSE, or abstain.\n\n"
         f"Valid causes: {', '.join(VALID_OUTPUTS)}.\n\n"
-        f"Cohort: {inp.cohort_label} over {inp.window}. Total cohort failures: {n_c}.\n"
-        f"Failure-code share — cohort vs baseline (with the cause each code implies):\n{table}\n\n"
+        f"Cohort: {inp.cohort_label} over {inp.window}. Total cohort failures: {inp.total_failures()}.\n"
+        f"Failure-code share — cohort vs baseline (with the cause each code implies):\n{table}\n"
+        f"{extra}\n"
         "How to decide, in order:\n"
         "1. Sample size first. A cohort of only a few dozen total failures (roughly forty "
         "or fewer) is too small to attribute a cause reliably — return "
@@ -219,9 +249,18 @@ class StatisticalProvider:
 
     def diagnose(self, inp: DiagnosisInput) -> dict:
         n = sum(inp.cohort_counts.values())
-        if n < self.MIN_SAMPLES:
+        if inp.total_failures() < self.MIN_SAMPLES:
             return {"cause": INSUFFICIENT, "confidence": 0.3,
-                    "evidence": [f"only {n} failures (< {self.MIN_SAMPLES}); too few to conclude"]}
+                    "evidence": [f"only {inp.total_failures()} failures (< {self.MIN_SAMPLES}); too few to conclude"]}
+        if n < self.MIN_SAMPLES:
+            # Open-world: enough failures, but too few carry a code in the
+            # documented table to attribute responsibly. A lookup rule cannot
+            # interpret unknown codes or free-text, and must not attribute a cause
+            # from a handful of recognised codes when most of the cohort is unreadable.
+            return {"cause": INSUFFICIENT, "confidence": 0.2, "_abstain_kind": "cannot_interpret",
+                    "evidence": [f"only {n} failures carry a documented code "
+                                 f"(of {inp.total_failures()}); a lookup rule cannot interpret "
+                                 "unknown codes or free-text messages"]}
         cohort = self._shares(inp.cohort_counts)
         base = self._shares(inp.baseline_counts)
         elevation = {c: cohort[c] - base[c] for c in CAUSE_CLASSES}
@@ -424,10 +463,12 @@ class Diagnoser:
         # Sample-size guardrail FIRST: a production diagnoser must not attribute a
         # cause from a handful of failures. Abstain deterministically — no model
         # call, no cache needed — so it reproduces everywhere (incl. cold clone).
-        n_cohort = sum(inp.cohort_counts.values())
+        # Counts ALL failures (known codes + unknown codes + free-text messages) so
+        # an open-world cohort is not abstained-away merely for lacking known codes.
+        n_cohort = inp.total_failures()
         if n_cohort < MIN_COHORT_FAILURES:
             return {"cause": INSUFFICIENT, "confidence": 0.0, "_provider": self.cache_namespace,
-                    "_tokens": [0, 0],
+                    "_tokens": [0, 0], "_abstain_kind": "guardrail",
                     "evidence": [f"guardrail: {n_cohort} failures (< {MIN_COHORT_FAILURES}); "
                                  "too few to attribute a cause"]}
 

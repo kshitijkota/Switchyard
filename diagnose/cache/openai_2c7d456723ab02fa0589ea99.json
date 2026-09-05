@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [1188, 64], "cause": "INSUFFICIENT_EVIDENCE", "confidence": 0.0, "evidence": ["Cohort size of 52 is not large enough to attribute a cause reliably.", "Failure codes show no clear dominant cause above baseline shares."]}

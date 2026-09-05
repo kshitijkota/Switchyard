@@ -90,7 +90,7 @@
     },
     {
       "cohort": "baseline cohort #2",
-      "confidence": 0.75,
+      "confidence": 0.8,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "CUSTOMER_SIDE",
@@ -106,7 +106,7 @@
     },
     {
       "cohort": "baseline cohort #4",
-      "confidence": 0.0,
+      "confidence": 0.5,
       "kind": "clear",
       "n_failures": 80,
       "predicted": "INSUFFICIENT_EVIDENCE",
@@ -169,15 +169,15 @@
       "true": "INSUFFICIENT_EVIDENCE"
     }
   ],
-  "estimated_cost_usd": 0.0022,
+  "estimated_cost_usd": 0.0021,
   "fallback_note": null,
   "harmful_error_rate": 0.1,
   "measured_by_language_model": true,
   "model": "gpt-4o-mini",
   "parse_failure_rate": 0.0,
   "partial_run": false,
-  "provider": "openai (live)",
+  "provider": "openai (from committed cache)",
   "stop_reason": null,
   "total_input_tokens": 9779,
-  "total_output_tokens": 1141
+  "total_output_tokens": 1102
 }

@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [695, 50], "cause": "CUSTOMER_SIDE", "confidence": 0.9, "evidence": ["U69 (collect request expired) is 100% of the cohort vs 26% baseline", "psp_app_not_available is 90% of the cohort"]}

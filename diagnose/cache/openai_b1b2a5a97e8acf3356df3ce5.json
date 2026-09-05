@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [611, 91], "cause": "ISSUER_DEGRADATION", "confidence": 0.9, "evidence": ["U28 (remitter/customer bank unavailable) cohort share 54% vs baseline 8%", "U30 (debit failed) cohort share 29% vs baseline 13% suggests ambiguity but does not dominate", "Other causes have lower cohort shares compared to U28"]}

@@ -21,6 +21,7 @@ venv/
 # numbers reproduce with no key; the offline/anthropic caches + incident log are
 # per-run and ignored.
 /diagnose/cache/statistical_*.json
+/diagnose/cache/trained_*.json
 /diagnose/cache/anthropic_*.json
 /diagnose/cache/*.log
 

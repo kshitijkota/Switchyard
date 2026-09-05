@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [1487, 76], "cause": "ISSUER_DEGRADATION", "confidence": 0.9, "evidence": ["Cohort failure messages indicate issuer bank unavailability.", "Free-text messages repeatedly mention issuer bank being unavailable.", "Cohort failures are consistent with issuer degradation rather than merchant integration or customer-side issues."]}

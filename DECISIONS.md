@@ -93,3 +93,31 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
     https://razorpay.com/docs/errors/ (source field values customer / business /
     gateway / razorpay; reasons e.g. payment_failed, insufficient_funds,
     bank_not_available, gateway_technical_error, payment_method_not_enabled).
+- **Open-world diagnosis test + trained classifier (TASK C).** The closed-world
+  diagnosis (six documented codes, five categories) is a lookup, so a rule ties a
+  small LLM there and the comparison is uninformative. TASK C adds (a) a held-out
+  open-world cohort set the rule cannot be pre-written for — real but WITHHELD
+  NPCI/Razorpay codes, free-text gateway messages, a minority-signal red herring,
+  and two-cause blends, all labelled before any method ran — and (b) a third
+  method, a multinomial logistic regression on documented-code shares, that sits
+  between the rule and the LLM. Design choices, fixed up front:
+  - Classifier features are the shares of the SEVEN documented codes only. By
+    construction it has no representation for withheld codes or free-text — it is
+    the closed-world view, so it should (and does) fail open-world. Trained on
+    resampled labelled windows from the deterministic log, so it reproduces with
+    no key; `ABSTAIN_THRESH=0.45` and an INSUFFICIENT class let it abstain.
+  - The lookup rule abstains when fewer than 40 cohort failures carry a
+    documented code (it must not attribute from the handful of ambient known codes
+    in a withheld-code cohort) — the honest lookup behaviour.
+  - Open-world interpretation guidance (untabled codes / free-text / "read the
+    minority signal") is added to the LLM prompt ONLY for cohorts that actually
+    carry unknown codes or free-text; closed-world cohorts get the unchanged base
+    prompt. This scopes the guidance to where it is relevant and keeps the
+    closed-world LLM number (0.846) identical to TASK B — the guidance is not a
+    tuning knob applied to closed-world results. See NOTES for why (a first pass
+    that put it in the base prompt made the model over-cautious on closed-world
+    baseline cohorts).
+  - The prediction (rules/trained win closed and fail open; LLM loses closed and
+    generalises open) is stated in the README BEFORE the results table, per the
+    governing rule, and the full grid — including the LLM's open-world errors — is
+    reported as measured.

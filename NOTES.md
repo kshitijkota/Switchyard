@@ -609,6 +609,49 @@ TASK C open-world test. (Numbers on the earlier buggy shifted data — rule 0.76
 harmful 0.15 — were briefly committed in a04c4fa and are corrected here once the
 economics-coupling bug was fixed; they are void.)
 
+### 2026-09-05 — TASK C: open-world diagnosis + trained classifier (design before results)
+
+Built the open-world set and the three-way comparison; labels + prediction fixed
+before running (governing rule). Prediction stated in the README before the table:
+rules/trained win closed & fail open; LLM loses closed & generalises open.
+
+**Result (accuracy on clear cohorts; harmful in parens):**
+
+| method | closed | open |
+|---|---|---|
+| rule | 0.923 (0.10) | 0.000 (0.10) |
+| trained LR | 1.000 (0.00) | 0.125 (0.40) |
+| gpt-4o-mini | 0.846 (0.10) | 0.625 (0.30) |
+
+Prediction HELD. Closed: trained 1.0 > rule 0.923 > LLM 0.846. Open: LLM 0.625 >>
+trained 0.125 > rule 0.0. The trained model fails DANGEROUSLY open-world (0.40
+harmful — confident wrong causes, the same distribution-shift optimism as the
+routing half); the rule fails SAFE (abstains). The LLM is the only generaliser but
+is not clean (0.30 harmful: misreads psp_app_not_available and
+gateway_technical_error as customer-side; over-asserts one blend).
+
+**C3 abstention split.** LLM closed-world abstention on ambiguous = 0.714, but 4 of
+5 are the deterministic sample-size guardrail (n<40, no model call); the model's
+OWN abstention on cohorts that reached it = 0.188 (3/16). Guardrail history (see
+above, 373-375): added after three prompt variants left abstention stuck at 0.167.
+Labelled as deterministic engineering, not model behaviour.
+
+**Prompt-scoping decision (documented for honesty, NOT tuning-to-win).** First pass
+put the open-world guidance ("read untabled codes / free-text / minority signals")
+in the BASE prompt. That made gpt-4o-mini over-cautious on CLOSED-world baseline
+cohorts (abstained on all four -> closed acc fell 0.846 -> 0.615, harmful 0.0). The
+guidance is only relevant when a cohort actually has unknown codes or free-text, so
+it was moved into the conditional block shown only for those cohorts; closed-world
+cohorts get the unchanged TASK B base prompt and reproduce 0.846. This is scoping
+guidance to relevant inputs, decided on principle — the closed-world number is not
+being adjusted toward a target, it is being kept identical to TASK B. The change
+was made because the base placement was a scoping error, and it is recorded here in
+full rather than silently.
+
+**Economics-invariance (carried from TASK B):** the code taxonomy still does not
+touch the success/reward stream (test_code_economics_invariant); TASK C adds no
+simulator change.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not

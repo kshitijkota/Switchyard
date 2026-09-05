@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [694, 78], "cause": "CUSTOMER_SIDE", "confidence": 0.9, "evidence": ["Cohort has 100% of Z9 failures (insufficient funds) compared to 27% baseline.", "Cohort has 90% of failures attributed to gateway_technical_error, indicating a potential customer-side issue."]}
