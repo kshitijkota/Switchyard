@@ -434,6 +434,35 @@ bygari's large-ticket traffic to pa/pc should sit near zero; switchyard's should
 rise then stabilise near ε. **If bygari wins, that is reported as-is** — it would
 mean exploration cost exceeds discovered value at ε=0.03.
 
+### 2026-09-05 — TASK A RESULTS (reported as measured; design was locked first)
+
+**A3 — off-policy eval table.** `bygari_baseline` (route by predicted SUCCESS)
+true value **40058.9 ₹/1k — the WORST method, below the legacy baseline
+(40117.1)**; improvement over legacy −58 (CI [−74,−42], significant). Routing on
+success instead of net revenue costs ≈₹1,705/1k versus `direct` (41763.5). Clean
+evidence that the objective (success vs net revenue) matters.
+
+**A2 — live 500k-txn online race.** `bygari_baseline` **WINS**: final cumulative
+net revenue ₹2,000,806.8/seed vs online switchyard ₹1,998,263.6/seed; difference
+**−₹2,543.2** (switchyard − bygari), CI [−5195.9, +4.4]; **switchyard never
+overtakes** (crossover: none). switchyard's exploration cost ≈₹937/seed.
+
+**The task's hypothesis was FALSIFIED and I report the reality:** bygari does NOT
+send ~0 traffic to the starved large-ticket region. Its RF *extrapolates pa's
+success high on large tickets and routes INTO pa there* (starved-share rises to
+**0.22**), exactly like `direct`. The online switchyard, whose legacy init
+already reflects pa-large being bad, *avoids* it (starved-share falls to
+**0.09**). So switchyard makes the better large-ticket calls, yet still loses
+overall because (a) its exploration cost and (b) its per-cell online learning
+(no cross-cell generalisation, slow to move off the heavy legacy init) drag it
+below bygari's strong pretrained RF on the 87% non-large traffic.
+
+Coherent with the exploration price curve: at ε=0.03 exploration buys honest
+estimates but its cost exceeds the net policy value it discovers over this
+horizon — so a strong pretrained model wins the live race. **This is the
+namesake method losing a comparison, reported at full volume, which is the whole
+point of the project.**
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not

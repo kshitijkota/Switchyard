@@ -90,6 +90,17 @@ def main() -> int:
         return r
 
     curve = guard("exploration price curve", _expl)
+
+    from eval.live_experiment import run as live_run, make_plots as live_plots
+
+    def _live():
+        r = live_run()
+        with open(os.path.join(ROOT, "artifacts", "timeseries.json"), "w") as fh:
+            json.dump(r, fh, indent=2, sort_keys=True)
+        live_plots(r)
+        return r
+
+    live = guard("live 500k online experiment (TASK A, ~4 min)", _live)
     recovery = guard("recovery evaluation", rec_eval)
     diagnosis = guard("diagnosis (gemini/committed cache)", _diag)
     diagnosis_stat = guard("diagnosis statistical reference", _diag_stat)
@@ -122,6 +133,13 @@ def main() -> int:
                   f"err_starved={p['estimation_error_starved']['error']:.1f}  "
                   f"cost={p['exploration_cost_per_1k']['value']:.1f}  "
                   f"true={p['true_policy_value']['value']:.1f}")
+    if live:
+        fc = live["final_cumulative_rupees"]
+        print(f"\n[TASK A live 500k] final cumulative ₹/seed — "
+              f"bygari_baseline {fc['bygari_baseline']['mean']} vs switchyard {fc['switchyard']['mean']}; "
+              f"switchyard−bygari {fc['switchyard_minus_bygari']['mean']} CI {fc['switchyard_minus_bygari']['ci']}; "
+              f"crossover {live['crossover_txn']}; starved-share bygari="
+              f"{live['final_starved_share']['bygari_baseline']} switchyard={live['final_starved_share']['switchyard']}")
     if recovery:
         m = recovery["money_recovered"]
         print(f"\n[§7 money recovered] {m['n_failures']} failures: incremental "

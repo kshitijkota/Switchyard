@@ -51,7 +51,7 @@ Because the phenomenon only bites in unexplored regions, the simulator's one hid
 
 ## Results table
 
-Four methods, learned from the same 200,000 confounded legacy logs (`switchyard` additionally gets a 200k epoch with 3% of decisions randomised). True value is by simulator rollout (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
+Methods learned from the same 200,000 confounded legacy logs (`switchyard` additionally gets a 200k epoch with 3% of decisions randomised). `bygari_baseline` is a faithful reimplementation of the published Razorpay router (Bygari et al., IEEE Big Data 2021) that routes on predicted **success**. True value is by simulator rollout (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
 
 | Method | Estimated | True | Estimation error | True 95% CI | Improvement over legacy (CI) | Weights clipped |
 |---|---:|---:|---:|:---:|:---:|---:|
@@ -60,10 +60,35 @@ Four methods, learned from the same 200,000 confounded legacy logs (`switchyard`
 | snips | 43070.3 | 40625.6 | +2444.7 | [40317, 40968] | +508.5 [481, 538] | 0 |
 | dr | 42986.6 | 41005.4 | +1981.3 | [40686, 41357] | +888 [863, 914] | 0 |
 | **switchyard** | 42180.4 | **41238.3** | +942.1 | [40918, 41597] | +1121 [1100, 1142] | 4039 |
+| bygari_baseline (success-router) | 40208.5 | 40058.9 | +149.6 | [39740, 40419] | **−58 [−74, −42]** | 0 |
 
-Legacy baseline true value **40117.1**; oracle **42325.3**. A **fee-blind success-rate router** (route to highest predicted success, ignoring fees) scores **39861.9 — below legacy**: optimising success rate loses money; the objective is expected net revenue. Every learned method's improvement CI clears zero.
+Legacy baseline true value **40117.1**; oracle **42325.3**. Two baselines below legacy: a **fee-blind success-rate router** scores **39861.9**, and **`bygari_baseline`**'s success-routing policy scores **40058.9 — below legacy and ₹1,705/1k below `direct`'s reward-routing.** Optimising success rate rather than expected net revenue loses money. Every *reward*-optimising method's improvement CI clears zero.
 
-The off-policy value estimators all **overstate their own policy** (ips +2558, snips +2445, dr +1981 per 1k). `switchyard` overstates least of that family (+942) *and* beats them all on true value.
+The off-policy value estimators all **overstate their own policy** (ips +2558, snips +2445, dr +1981 per 1k). `switchyard` overstates least of that family (+942) *and* beats them all on true value. **Offline, `switchyard`'s policy dominates `bygari_baseline` by ₹1,179/1k** — but the live online race below tells a different story.
+
+---
+
+## Live continuous operation: bygari_baseline vs switchyard — **bygari wins**
+
+Run both as online learners in parallel over 500,000 fresh transactions (10 seeds × 50k), each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit.
+
+![cumulative net revenue](artifacts/cumulative_value.png)
+
+| Final cumulative net revenue (₹/seed, mean over 10 seeds, 500k txns) | Value | 95% CI |
+|---|---:|:---:|
+| bygari_baseline | **2,000,806.8** | [1,991,651, 2,010,287] |
+| switchyard (net of exploration) | 1,998,263.6 | [1,987,985, 2,008,988] |
+| switchyard − bygari | **−2,543.2** | [−5,195.9, +4.4] |
+
+**`bygari_baseline` finishes ahead and `switchyard` never overtakes** (crossover: none in 500k). The gap is small (~0.13% of revenue) and at the edge of significance, but it is negative for switchyard throughout. switchyard's exploration cost was ₹937/seed.
+
+Why — and note the task's stated hypothesis was **falsified**, reported as-is:
+
+![starved-region traffic](artifacts/starved_region_traffic.png)
+
+The hypothesis was that `bygari` would send ~0 traffic to the starved large-ticket region and never discover the best option there. It does the **opposite**: its random forest extrapolates pa's success upward on large tickets and routes *into* pa (starved-region share rises to **0.22**), exactly the `direct`-style optimism. The online `switchyard`, whose legacy initialisation already reflects pa being bad on large tickets, *avoids* it (share falls to **0.09**). So switchyard makes the **better large-ticket decisions** — yet still loses overall, because its exploration cost plus its per-cell online learning (no cross-cell generalisation, slow to move off the heavy legacy prior) drag it below `bygari`'s strong pretrained RF on the ~87% of traffic that is not large-ticket.
+
+This is coherent with the exploration price curve: at ε = 0.03, exploration buys **honest estimates** but its cost exceeds the **net policy value** it discovers over this horizon, so a strong pretrained model wins the live race. **The method this project is named after loses this comparison; that is reported here at full size because the entire claim is about not fooling yourself.**
 
 ---
 
@@ -145,7 +170,8 @@ What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every is
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
 6. **The LLM diagnosis roughly matches a hand-written rule** (0.846 vs 0.923 accuracy; identical 0.667 abstention / 0.105 harmful): the five-way classification is simple enough that gpt-4o-mini's reasoning does not beat a deterministic rule, and it still over-asserts on genuinely-mixed cohorts. A larger model would likely handle the blends better.
-7. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
+7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It loses the live race to `bygari_baseline`; a model-based online learner might do better, but that was not the committed design and is not claimed.
+8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
 ---
 
@@ -153,7 +179,7 @@ What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every is
 
 ```bash
 pip install -r requirements.txt
-python verify.py          # runs tests, regenerates every artifact, reprints every number above
+python verify.py          # runs tests, regenerates every artifact, reprints every number above (~5 min: includes the 500k live experiment)
 ```
 
 `verify.py` exits non-zero on any failure and is deterministic on fixed seeds (byte-identical logs/tables, enforced by `tests/test_determinism.py`). The diagnosis numbers reproduce from the committed Gemini cache with **no API key**; set `GEMINI_API_KEY` (see `.env.example`) to complete the remaining cohorts after the daily quota resets.
@@ -164,7 +190,7 @@ python verify.py          # runs tests, regenerates every artifact, reprints eve
 
 The routing machinery here is established; **this project's contribution is the evaluation layer** — measuring when a model trained on logged routing decisions can and cannot be trusted, and pricing the exploration that fixes it.
 
-- **Razorpay's published router** — Bygari, Gupta et al., *"An Intelligent Payment Routing System"*, IEEE Big Data 2021.
+- **Razorpay's published router** — Bygari et al., *"An AI-powered Smart Routing Solution for Payment Systems,"* IEEE Big Data 2021 — **reimplemented here as `bygari_baseline`** (static eligibility + LR downtime breaker; dynamic RF success-router with time-decay feedback) and run head-to-head above.
 - **PayU** — payment success-rate routing, WWW 2018.
 - **Juspay** — payment orchestration / smart routing (industry).
 - **Adyen** — contextual-bandit payment routing, arXiv:2412.00569.

@@ -27,6 +27,23 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   each other and, with a busy timeout, serialises concurrent writers cleanly, so
   the 10-concurrent-identical-events test yields exactly one attempt. The store
   is the source of truth; no application-level lock is needed.
+- **bygari_baseline constants (TASK A).** Faithful reimplementation of Bygari et
+  al. (IEEE Big Data 2021). Eligibility table: all three processors are
+  contractually eligible for every txn in this sim (no artificial restriction —
+  the interesting behaviour is in the dynamic module, not a static allow-list).
+  Adaptive time-decay feedback uses EWMA with `SUCCESS_DECAY=0.99` (rolling
+  success rate) and `ERRVEL_DECAY=0.98` (error velocity); the LR downtime breaker
+  trips at predicted failure prob > 0.60. RF: 60 trees, depth 14. These were
+  chosen up front (typical EWMA half-lives ~70/35 events) and NOT tuned to the
+  comparison outcome. Online routing freezes the rolling features within 100-txn
+  mini-batches for tractability (per-txn RF predict would take ~2h for 500k);
+  this if anything slows bygari's feedback, it does not favour switchyard.
+- **Online switchyard design (TASK A).** A deliberately simple online analog: a
+  per-(cell, processor) running mean of net reward initialised from the legacy
+  log, ε-greedy (ε=0.03), updated online. It is weaker than the batch DR
+  switchyard (no cross-cell model generalisation) — a fair, faithful online
+  contextual bandit, not the batch estimator. This choice was committed before
+  the run; the batch/online gap is itself part of the reported finding.
 - **Why the LLM is confined to diagnosis.** Routing decides where real money
   goes, per transaction, at scale — it must be auditable, reproducible, and
   bounded, which the estimator/policy stack is and a free-text model is not. The

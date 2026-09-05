@@ -227,6 +227,23 @@
         40917.9,
         41596.9
       ]
+    },
+    {
+      "distinguishable_from_baseline": true,
+      "estimated_value": 40208.5,
+      "estimation_error": 149.6,
+      "improvement_ci": [
+        -74.4,
+        -41.7
+      ],
+      "improvement_over_legacy": -58.2,
+      "method": "bygari_baseline",
+      "n_clipped": 0,
+      "true_value": 40058.9,
+      "true_value_ci": [
+        39740.0,
+        40418.8
+      ]
     }
   ],
   "segment_table": [

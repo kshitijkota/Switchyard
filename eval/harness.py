@@ -227,12 +227,42 @@ def _pa_extrapolation_with_plot(methods) -> dict:
     return ev
 
 
+def _eval_arrays(seeds, n_per_seed, profile="main"):
+    ms, iss, amt, hr = [], [], [], []
+    for s in seeds:
+        ta = generate_traffic_arrays(n_per_seed, seed=s, prefix=f"ev{s}_", profile=profile)
+        ms.append(ta.methods); iss.append(ta.issuers); amt.append(ta.amounts); hr.append(ta.hours)
+    return np.concatenate(ms), np.concatenate(iss), np.concatenate(amt), np.concatenate(hr)
+
+
+def bygari_batch(legacy_ds, cell_idx, seeds, n_per_seed):
+    """Batch bygari_baseline for the off-policy eval table (TASK A3): per-cell
+    policy by predicted SUCCESS, and a self-estimate = predicted success × reward
+    over the eval traffic. Returns (policy_idx, estimated_value_per_1k)."""
+    from policy.bygari import BygariRouter
+    bygari = BygariRouter().fit(legacy_ds)
+    policy_idx = np.array([PROC_INDEX[bygari.route(representative_context(c))] for c in ALL_CELLS],
+                          dtype=np.int64)
+    ms, iss, amt, hr = _eval_arrays(seeds, n_per_seed)
+    chosen = policy_idx[cell_idx]
+    pred = bygari.predicted_success_vec(ms, iss, amt, hr, chosen)
+    rif = np.empty(len(amt))
+    for p, proc in enumerate(PROCESSORS):
+        m = chosen == p
+        rif[m] = ec.reward_if_success_paise_vec(proc, amt[m]).astype(float)
+    estimated = float((pred * rif).mean() * 10.0)
+    return policy_idx, estimated
+
+
 def run_evaluation(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED) -> dict:
     legacy_ds, explore_ds = load_datasets()
     methods = build_all(legacy_ds, explore_ds)
     cell_idx, exp_reward, legacy_pertxn = build_eval_matrices(seeds, n_per_seed)
 
     per_txn = {name: policy_pertxn(m.policy_idx, cell_idx, exp_reward) for name, m in methods.items()}
+    # TASK A3: batch bygari_baseline alongside the others.
+    bygari_policy, bygari_est = bygari_batch(legacy_ds, cell_idx, seeds, n_per_seed)
+    per_txn["bygari_baseline"] = policy_pertxn(bygari_policy, cell_idx, exp_reward)
     boot = paired_bootstrap(per_txn, legacy_pertxn)
 
     # optimal (oracle) value + §1 fee-blind success-router baseline, for reference
@@ -255,6 +285,19 @@ def run_evaluation(seeds=EVAL_SEEDS, n_per_seed=EVAL_N_PER_SEED) -> dict:
             "distinguishable_from_baseline": b["distinguishable_from_baseline"],
             "n_clipped": m.n_clipped,
         })
+    # append the bygari_baseline row (TASK A3)
+    bb = boot["bygari_baseline"]
+    table.append({
+        "method": "bygari_baseline",
+        "estimated_value": round(bygari_est, 1),
+        "true_value": round(bb["true_value"], 1),
+        "estimation_error": round(bygari_est - bb["true_value"], 1),
+        "true_value_ci": [round(bb["value_ci"][0], 1), round(bb["value_ci"][1], 1)],
+        "improvement_over_legacy": round(bb["improvement"], 1),
+        "improvement_ci": [round(bb["improvement_ci"][0], 1), round(bb["improvement_ci"][1], 1)],
+        "distinguishable_from_baseline": bb["distinguishable_from_baseline"],
+        "n_clipped": 0,
+    })
 
     results = {
         "config": {"eval_seeds": seeds, "n_per_seed": n_per_seed,
