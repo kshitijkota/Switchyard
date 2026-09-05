@@ -91,16 +91,23 @@ def main() -> int:
 
     curve = guard("exploration price curve", _expl)
 
-    from eval.live_experiment import run as live_run, make_plots as live_plots
+    from eval.live_experiment import run_cell as live_cell, make_plots as live_plots, SEEDS, N_PER_SEED
 
+    # The full diagnostic grid (H1 ε-sweep at 40 seeds + H2 2M/seed) is a long
+    # run committed to artifacts/timeseries.json (RULE 5-style: expensive, run
+    # once). verify re-runs only the headline cell (ε=0.03, 40 seeds, 50k/seed)
+    # to reprint the live numbers, and reads the committed grid for the rest.
     def _live():
-        r = live_run()
-        with open(os.path.join(ROOT, "artifacts", "timeseries.json"), "w") as fh:
-            json.dump(r, fh, indent=2, sort_keys=True)
-        live_plots(r)
-        return r
+        c = live_cell(0.03, SEEDS, N_PER_SEED)
+        live_plots(c)
+        return c
 
-    live = guard("live 500k online experiment (TASK A, ~4 min)", _live)
+    live = guard("live online race — headline cell ε=0.03, 40 seeds (TASK A)", _live)
+    live_grid = None
+    _tp = os.path.join(ROOT, "artifacts", "timeseries.json")
+    if os.path.exists(_tp):
+        with open(_tp) as fh:
+            live_grid = json.load(fh)
     recovery = guard("recovery evaluation", rec_eval)
     diagnosis = guard("diagnosis (gemini/committed cache)", _diag)
     diagnosis_stat = guard("diagnosis statistical reference", _diag_stat)
@@ -134,12 +141,29 @@ def main() -> int:
                   f"cost={p['exploration_cost_per_1k']['value']:.1f}  "
                   f"true={p['true_policy_value']['value']:.1f}")
     if live:
-        fc = live["final_cumulative_rupees"]
-        print(f"\n[TASK A live 500k] final cumulative ₹/seed — "
-              f"bygari_baseline {fc['bygari_baseline']['mean']} vs switchyard {fc['switchyard']['mean']}; "
-              f"switchyard−bygari {fc['switchyard_minus_bygari']['mean']} CI {fc['switchyard_minus_bygari']['ci']}; "
-              f"crossover {live['crossover_txn']}; starved-share bygari="
-              f"{live['final_starved_share']['bygari_baseline']} switchyard={live['final_starved_share']['switchyard']}")
+        d = live["diff_switchyard_minus_bygari"]; h3 = live["H3_starved_region"]
+        fs = live["H3_starved_region"]["final_starved_share_large_to_paapc"]
+        print(f"\n[TASK A live race — ε=0.03, {len(live['seeds'])} seeds × {live['n_per_seed']:,}/seed]")
+        print(f"  final net ₹/seed — bygari {live['final']['bygari'][0]} vs switchyard {live['final']['switchyard'][0]}")
+        print(f"  switchyard − bygari  {d['mean']} CI {d['ci']}  "
+              f"({'INDISTINGUISHABLE — CI crosses 0' if d['indistinguishable'] else 'distinguishable'}); "
+              f"crossover {live['crossover_txn']}")
+        print(f"  [H3] starved large-ticket (>₹5k) traffic share {h3['traffic_share']}; "
+              f"restricted diff (large) {h3['restricted_diff_large']['mean']} CI {h3['restricted_diff_large']['ci']}; "
+              f"remainder diff (small) {h3['remainder_diff_small']['mean']} CI {h3['remainder_diff_small']['ci']}")
+        print(f"  [H3] large-ticket share routed to pa/pc — bygari {fs['bygari']} vs switchyard {fs['switchyard']}")
+    if live_grid:
+        h1 = live_grid["H1_eps_sweep"]; h2 = live_grid["H2_horizon_2M"]
+        print(f"\n[TASK A full grid — read from committed artifacts/timeseries.json]")
+        print(f"  H1 ε-sweep (40 seeds × 50k): ε → switchyard−bygari CI (xover)")
+        for e in sorted(h1):
+            c = h1[e]; dd = c["diff_switchyard_minus_bygari"]
+            tag = " *indist*" if dd["indistinguishable"] else ""
+            print(f"    ε={e}  diff {dd['mean']:>9.1f} CI {dd['ci']}  xover {c['crossover_txn']}{tag}")
+        hd = h2["diff_switchyard_minus_bygari"]
+        print(f"  H2 horizon (ε={live_grid['best_eps_for_switchyard']}, {h2['n_per_seed']:,}/seed × "
+              f"{len(h2['seeds'])} seeds): diff {hd['mean']} CI {hd['ci']} "
+              f"({'indistinguishable' if hd['indistinguishable'] else 'distinguishable'}); xover {h2['crossover_txn']}")
     if recovery:
         m = recovery["money_recovered"]
         print(f"\n[§7 money recovered] {m['n_failures']} failures: incremental "

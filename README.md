@@ -170,7 +170,7 @@ What it gets right and wrong, honestly: gpt-4o-mini correctly diagnoses every is
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
 6. **The LLM diagnosis roughly matches a hand-written rule** (0.846 vs 0.923 accuracy; identical 0.667 abstention / 0.105 harmful): the five-way classification is simple enough that gpt-4o-mini's reasoning does not beat a deterministic rule, and it still over-asserts on genuinely-mixed cohorts. A larger model would likely handle the blends better.
-7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It loses the live race to `bygari_baseline`; a model-based online learner might do better, but that was not the committed design and is not claimed.
+7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It does **not pull ahead of** `bygari_baseline` in the live race — the two are statistically indistinguishable (the difference CI includes zero); a model-based online learner might do better, but that was not the committed design and is not claimed.
 8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
 ---
