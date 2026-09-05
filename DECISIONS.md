@@ -27,8 +27,8 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   each other and, with a busy timeout, serialises concurrent writers cleanly, so
   the 10-concurrent-identical-events test yields exactly one attempt. The store
   is the source of truth; no application-level lock is needed.
-- **bygari_baseline constants (TASK A).** Faithful reimplementation of Bygari et
-  al. (IEEE Big Data 2021). Eligibility table: all three processors are
+- **bygari_baseline constants (TASK A).** Faithful reimplementation of the routing
+  architecture described in Bygari et al. (2021). Eligibility table: all three processors are
   contractually eligible for every txn in this sim (no artificial restriction —
   the interesting behaviour is in the dynamic module, not a static allow-list).
   Adaptive time-decay feedback uses EWMA with `SUCCESS_DECAY=0.99` (rolling
@@ -36,14 +36,18 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   trips at predicted failure prob > 0.60. RF: 60 trees, depth 14. These were
   chosen up front (typical EWMA half-lives ~70/35 events) and NOT tuned to the
   comparison outcome. Online routing freezes the rolling features within 100-txn
-  mini-batches for tractability (per-txn RF predict would take ~2h for 500k);
-  this if anything slows bygari's feedback, it does not favour switchyard.
+  mini-batches for tractability (a per-txn RF predict would take hours over the
+  millions of transactions in the live race); this if anything slows bygari's
+  feedback, it does not favour switchyard.
 - **Online switchyard design (TASK A).** A deliberately simple online analog: a
   per-(cell, processor) running mean of net reward initialised from the legacy
-  log, ε-greedy (ε=0.03), updated online. It is weaker than the batch DR
-  switchyard (no cross-cell model generalisation) — a fair, faithful online
-  contextual bandit, not the batch estimator. This choice was committed before
-  the run; the batch/online gap is itself part of the reported finding.
+  log, ε-greedy, updated online. It is weaker than the batch DR switchyard (no
+  cross-cell model generalisation) — a fair, faithful online contextual bandit,
+  not the batch estimator. This choice was committed before the run; the
+  batch/online gap is itself part of the reported finding. The diagnostic re-run
+  sweeps ε over `EPS_GRID = {0.01, 0.03, 0.10}` at 40 seeds (0.03 was the original
+  committed default); the full sweep is reported, and the cheapest ε = 0.01 turned
+  out best for switchyard over the tested horizons.
 - **Why the LLM is confined to diagnosis.** Routing decides where real money
   goes, per transaction, at scale — it must be auditable, reproducible, and
   bounded, which the estimator/policy stack is and a free-text model is not. The
@@ -53,9 +57,10 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   response, and its answers are cached by input hash so evaluation is
   reproducible and cheap. Abstention is rewarded in scoring, so the model is
   never pushed to guess. This keeps the LLM's failure modes off the money path.
-  (In this build environment no API key was available, so the reported numbers
-  come from the deterministic offline statistical diagnoser; the LLM path runs
-  and is scored identically when ANTHROPIC_API_KEY is set.)
+  (The reported diagnosis numbers are from OpenAI `gpt-4o-mini` at temperature 0
+  and reproduce from the committed input-hash cache with **no API key**; the
+  deterministic offline statistical diagnoser and the Gemini/Anthropic paths stay
+  selectable and are scored identically.)
 - **Real published failure codes (TASK B).** The failure taxonomy is no longer
   invented. The UPI path uses NPCI's published UPI response codes; the
   card/netbanking path uses Razorpay's documented payment error codes. Only the
@@ -76,7 +81,12 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   The code→true-cause map lives in `sim/ground_truth.py` only; the event log the
   models consume carries the bare code string. U30 is emitted from **both**
   issuer and network failures (`AMBIGUOUS_EMIT_PROB=0.35`, chosen up front, not
-  tuned) so a U30-dominated cohort genuinely mixes two causes. The recovery
+  tuned) so a U30-dominated cohort genuinely mixes two causes. The override is
+  chosen by a deterministic hash of `(txn_id, processor)` that consumes **no** RNG
+  draws — a failure code is a cosmetic label and must not perturb the success/reward
+  stream, so the routing experiments reproduce byte-identically regardless of the
+  taxonomy (a first version drew from the outcome RNG and silently moved the live-race
+  result; a regression test now locks the invariant — see NOTES). The recovery
   engine's non-retryable "hard decline" is now `Z9` (insufficient funds — routing
   the same payment elsewhere cannot create funds), replacing the old `U16`.
   Sources (retrieved 2026-09-05):
@@ -94,7 +104,7 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
     gateway / razorpay; reasons e.g. payment_failed, insufficient_funds,
     bank_not_available, gateway_technical_error, payment_method_not_enabled).
 - **Open-world diagnosis test + trained classifier (TASK C).** The closed-world
-  diagnosis (six documented codes, five categories) is a lookup, so a rule ties a
+  diagnosis (seven documented codes, five categories) is a lookup, so a rule ties a
   small LLM there and the comparison is uninformative. TASK C adds (a) a held-out
   open-world cohort set the rule cannot be pre-written for — real but WITHHELD
   NPCI/Razorpay codes, free-text gateway messages, a minority-signal red herring,
