@@ -586,15 +586,28 @@ Added a grader cohort "U30 debit-failure surge" (kind=ambiguous) plus a unit tes
 `test_statistical_abstains_on_ambiguous_code`. The code→cause map stays in
 `sim/ground_truth.py`; the event log carries only the bare code.
 
-**Observed but NOT tuned (governing rule).** With the regenerated data the
-deterministic reference now abstains on 3 of 4 `baseline` "customer" cohorts:
-their realised customer-code share lands just under the pre-existing 0.55
-dominance threshold (a baseline window looks like normal ambient traffic, so
-"nothing anomalous" is a defensible read). This is sampling variance around a
-threshold set at the mean, surfaced by the new code set — I am NOT moving the
-threshold or the labels in response to it. It lowers the closed-world reference
-accuracy vs the old taxonomy and that is reported as-is; it also motivates TASK C
-(the closed-world test is brittle where a lookup meets ambient noise).
+**Coupling bug found and fixed (2026-09-05).** First implementation emitted the
+ambiguous U30 by adding an `rng.random()` draw inside `sample_outcome` on
+issuer/network failures. That draw came from the OUTCOME rng, so it shifted the
+whole success/reward stream — the regenerated legacy log's economics changed and
+the TASK A live race moved from −₹1,092.7 (indistinguishable) to +₹5,336.4
+(switchyard "wins"), purely from the reshuffle. That is a leak: a failure-code
+label must never perturb the routing economics. Fixed by choosing the U30
+override from a deterministic hash of (txn_id, processor) that consumes NO rng
+draws, keeping the success/cause/code-index draws byte-identical to before. After
+the fix the TASK A headline reproduces exactly (−1,092.7 confirmed), so the whole
+40-seed grid stands unchanged and only failure-code LABELS differ. Lesson logged:
+the economic outcome must be invariant to the failure taxonomy.
+
+**Diagnosis result on the corrected data (real codes).** gpt-4o-mini
+accuracy_clear 0.846, abstention_ambiguous 0.714, harmful 0.100; offline rule
+0.923 / 0.714 / 0.100. Both abstain on the U30 ambiguous cohort. This matches the
+old invented-code finding (rule slightly ahead on clear-accuracy; identical
+abstention/harmful; same two blend errors) — i.e. switching to real codes did NOT
+change the closed-world conclusion, which is the honest result and motivates the
+TASK C open-world test. (Numbers on the earlier buggy shifted data — rule 0.769,
+harmful 0.15 — were briefly committed in a04c4fa and are corrected here once the
+economics-coupling bug was fixed; they are void.)
 
 ### Open questions
 

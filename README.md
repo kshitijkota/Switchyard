@@ -163,20 +163,16 @@ A single contained job (never routes): given a cohort's failure-code counts and 
 
 | Metric (all 20 cohorts) | gpt-4o-mini | offline rule (not an LLM) |
 |---|---:|---:|
-| Accuracy on clear cohorts (13) | **0.846** (11/13) | 0.769 (10/13) |
-| Abstention on ambiguous cohorts (7, rewarded) | 0.714 (5/7) | **0.857** (6/7) |
-| Harmful-error rate (a wrong assertion) | 0.150 (3/20) | **0.050** (1/20) |
+| Accuracy on clear cohorts (13) | 0.846 (11/13) | **0.923** (12/13) |
+| Abstention on ambiguous cohorts (7, rewarded) | 0.714 (5/7) | 0.714 (5/7) |
+| Harmful-error rate (a wrong assertion) | 0.100 (2/20) | 0.100 (2/20) |
 | Parse-failure rate | 0.000 | 0.000 |
 
-**Both correctly abstain on the genuinely-ambiguous `U30` cohort** — the code names two causes, and neither the model nor the rule invents one. That is the headline of the real-code change.
+**Both correctly abstain on the genuinely-ambiguous `U30` cohort** — the code names two causes, and neither the model nor the rule invents one. That is the headline of the real-code change, and it is the point of the ambiguity: a U30-dominated window is un-diagnosable, and both the model and the rule say so.
 
-Beyond that, neither wins outright, and the result is more interesting than the earlier invented-code version (which had the rule ahead 0.923 vs 0.846):
-- **gpt-4o-mini** is more willing to name a cause: it diagnoses every issuer / merchant / network cohort and 2 of 4 customer-baseline cohorts correctly (higher clear-accuracy, 0.846). But that willingness costs it — it **over-asserts on the two constructed two-cause blends** (confidently names the larger cause) and makes one wrong call on a baseline window, for a **0.15 harmful rate**.
-- the **offline rule** is more cautious: it abstains on 3 of 4 baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is defensible) — which *lowers* its clear-accuracy to 0.769 — but that caution gives it the **higher ambiguous-abstention (0.857) and the lower harmful rate (0.050)**.
+Beyond that, the closed-world result with **real** codes matches the earlier invented-code one: a hand-written rule (0.923) still slightly edges gpt-4o-mini (0.846) on clear-accuracy, with **identical** abstention (0.714) and harmful rates (0.100). The two make the *same* two harmful errors — the constructed two-cause blends, where each confidently names the larger cause instead of abstaining. The only difference is on the customer-baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is a defensible read): the rule abstains on one of them, gpt-4o-mini on two, which is what separates 0.923 from 0.846. The offline numbers are **not** presented as language-model performance. That a small LLM does not beat a fixed six-code lookup on this closed-world task — even after swapping in real codes — is exactly what motivates the open-world test in TASK C.
 
-So on this closed-world, real-code task the two trade off (the LLM names more but errs more; the rule errs less but names less) rather than one dominating. The offline numbers are **not** presented as language-model performance. That the comparison is this close on a fixed six-code lookup is exactly what motivates the open-world test in TASK C.
-
-**Disclosure:** provider OpenAI, model `gpt-4o-mini`; 9,779 input / 1,089 output tokens; **estimated cost $0.0021** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Gemini and Anthropic paths stay selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
+**Disclosure:** provider OpenAI, model `gpt-4o-mini`; 9,779 input / 1,141 output tokens; **estimated cost $0.0022** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Gemini and Anthropic paths stay selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
 
 ---
 
@@ -187,7 +183,7 @@ So on this closed-world, real-code task the two trade off (the LLM names more bu
 3. **The simulator models each attempt as an independent draw** (no failure persistence), so absolute recovery counts (3,489/5,000) are optimistic; the *incremental-over-legacy* metric, which is headlined, is unaffected.
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
-6. **On the closed-world, real-code diagnosis task the LLM and a hand-written rule trade off, neither dominating** (gpt-4o-mini 0.846 clear-accuracy / 0.15 harmful vs the rule's 0.769 / 0.05): both correctly abstain on the genuinely-ambiguous `U30` code, the LLM names more causes but over-asserts on the two-cause blends, and the rule is more cautious but abstains on baseline windows. A fixed six-code lookup is close enough to a small LLM that the *closed-world* test cannot separate them — which is what TASK C's open-world test is for.
+6. **On the closed-world, real-code diagnosis task a hand-written rule still slightly beats the small LLM** (rule 0.923 vs gpt-4o-mini 0.846 clear-accuracy; identical 0.714 abstention and 0.100 harmful — the *same* two blend errors): both correctly abstain on the genuinely-ambiguous `U30` code, both over-assert on the two-cause blends, and the gap is only that gpt-4o-mini abstains on one extra baseline window. A fixed six-code lookup is simple enough that a small LLM does not beat it here — even with real codes — which is what TASK C's open-world test is for.
 7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It does **not pull ahead of** `bygari_baseline` in the live race — the two are statistically indistinguishable (the difference CI includes zero); a model-based online learner might do better, but that was not the committed design and is not claimed.
 8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 

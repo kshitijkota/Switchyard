@@ -1,0 +1,1 @@
+{"_provider": "openai", "_tokens": [611, 75], "cause": "ISSUER_DEGRADATION", "confidence": 0.9, "evidence": ["U28 cohort share 54% vs baseline 8%", "U30 cohort share 29% vs baseline 13% (ambiguous but not dominant)", "Other causes have lower cohort shares"]}

@@ -14,6 +14,7 @@ It holds two latent structures the models are not allowed to see:
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date, datetime
 
 import numpy as np
@@ -173,12 +174,24 @@ def _cause_mix(context: Context, processor: str) -> dict:
     return _REGIME_MIX[regime(context, processor)]
 
 
+def _ambiguous_draw(context: Context, processor: str) -> float:
+    """A deterministic pseudo-random value in [0,1) for the U30 override, keyed on
+    txn_id+processor. Crucially it consumes NO draws from the outcome RNG — the
+    failure CODE is a cosmetic label and must never perturb the success/reward
+    stream (see NOTES 2026-09-05). So the economic outcome is invariant to the
+    failure-code taxonomy, and the routing experiments reproduce unchanged."""
+    h = hashlib.sha256(f"{context.txn_id}|{processor}|u30".encode()).digest()
+    return int.from_bytes(h[:8], "big") / 2 ** 64
+
+
 def sample_outcome(context: Context, processor: str, rng: np.random.Generator):
     """Draw (success, failure_code, true_cause).
 
     On success -> (True, None, None). On failure -> (False, <code>, <cause>),
     where the cause is drawn from the regime mixture and the code from that
-    cause's codes. Deterministic given `rng` state.
+    cause's codes. Deterministic given `rng` state. The RNG draws (success, cause,
+    code index) are IDENTICAL regardless of the code taxonomy, so success/reward
+    outcomes do not depend on which failure codes exist.
     """
     p = success_prob(context, processor)
     if rng.random() < p:
@@ -188,15 +201,15 @@ def sample_outcome(context: Context, processor: str, rng: np.random.Generator):
     weights = np.array([mix[c] for c in causes], dtype=np.float64)
     weights /= weights.sum()
     cause = causes[int(rng.choice(len(causes), p=weights))]
+    codes = CAUSE_TO_CODES[cause]
+    code = codes[int(rng.integers(len(codes)))]           # always consumed (preserves stream)
     # Some issuer/network failures surface as the ambiguous U30 ("debit failed"),
-    # whose published meaning names two possible causes — so the code alone cannot
-    # attribute them. The latent true_cause is still recorded (issuer or network);
-    # only the observable code is ambiguous.
-    if cause in AMBIGUOUS_CAUSES and rng.random() < AMBIGUOUS_EMIT_PROB:
+    # whose published meaning names two causes — so the code alone cannot attribute
+    # them. Chosen by a hash (no RNG draw), so the economic stream is unchanged; the
+    # latent true_cause is still recorded (issuer or network), only the code is
+    # ambiguous.
+    if cause in AMBIGUOUS_CAUSES and _ambiguous_draw(context, processor) < AMBIGUOUS_EMIT_PROB:
         code = AMBIGUOUS_CODE
-    else:
-        codes = CAUSE_TO_CODES[cause]
-        code = codes[int(rng.integers(len(codes)))]
     return False, code, cause
 
 
