@@ -385,6 +385,55 @@ diagnosis with OpenAI `gpt-4o-mini` (spend cap raised to $20, $5 tripwire).
   cohorts — customer failure is the ambient norm, not an anomaly). Reported as-is.
 - Per the user, the repo is NOT to be made public.
 
+### 2026-09-05 — EXTENSION TASK A: design LOCKED before running (governing rule)
+
+Precondition note: the extension doc says "after the repo is public"; the owner
+asked to keep it private, so these run against the private repo.
+
+**`bygari_baseline`** — faithful reimplementation of Bygari et al. (IEEE Big Data
+2021), added alongside `direct` (which stays). Online router:
+- Static module: (a) eligibility table — in this sim all three processors are
+  contractually eligible for every txn (documented; no artificial restriction);
+  (b) a **logistic-regression downtime circuit breaker** on each processor's
+  recent error velocity (time-decayed failure rate over a rolling window) — fit
+  on the legacy log to predict imminent failure; at decision time a processor
+  whose predicted failure prob exceeds a threshold is removed.
+- Dynamic module: a **random forest** predicting P(success) per processor from
+  [method, issuer, amount-bucket, hour, per-processor rolling time-decayed
+  success rate]; route to the ELIGIBLE, non-broken processor with the highest
+  predicted **success probability** (NOT net revenue — as the paper describes;
+  the objective gap is part of what we measure). Trained once on the legacy log.
+- Adaptive time-decay feedback: after each outcome, update the per-processor
+  rolling success rate and error velocity with EWMA decay λ (documented in
+  DECISIONS). The fixed RF reacts to degradation in options it USES via these
+  features; it gets no signal on options it never routes to.
+
+**Online `switchyard`** — faithful online analog: per-(cell, processor) running
+estimate of **net reward** (initialised from the legacy log), ε-greedy (ε=0.03)
+exploration, updated online; routes argmax net reward. Optimises revenue AND
+explores. Same cell discretisation; both routers start from the SAME confounded
+legacy log.
+
+The two differences under test are exactly (1) objective (success vs net revenue)
+and (2) exploration (none vs ε) — nothing else is tilted.
+
+**Experiment:** run both live and in parallel over 10 seeds × 50k = 500k fresh
+main-profile txns. Record actual cumulative net revenue per method (switchyard's
+line is its ACTUAL earned reward, i.e. already net of what exploration cost —
+explore txns earn their real lower reward), the share of each method's large
+(>₹5k) traffic sent to the starved pa/pc options over time, and the crossover
+txn where switchyard's cumulative overtakes bygari (or that it never does).
+Bootstrap 95% CIs on final values across the 10 seeds. Emit
+`artifacts/{cumulative_value.png, starved_region_traffic.png, timeseries.json}`.
+
+**Hypothesis (stated before running):** switchyard ends higher on cumulative net
+revenue because bygari (a) optimises success not revenue, so it loses at the
+fee crossovers (small tickets → pa though pb/pc pay more), and (b) never explores
+the starved large-ticket pa/pc options, so it can't discover a better one there.
+bygari's large-ticket traffic to pa/pc should sit near zero; switchyard's should
+rise then stabilise near ε. **If bygari wins, that is reported as-is** — it would
+mean exploration cost exceeds discovered value at ε=0.03.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
