@@ -467,6 +467,35 @@ does not pull ahead. Reported at full volume, which is the whole point of the
 project. (A 40-seed re-run + ε/horizon/thin-slice diagnostics follow, to raise
 precision and test whether the design was under-powered against switchyard.)
 
+### 2026-09-05 — TASK A diagnostic re-run: GRID + SEEDS LOCKED before running
+
+Per-seed length: the original per-seed stream was **50,000** txns (10 seeds ×
+50k = 500k total). The request says "500k txns/seed" but also "do not lengthen
+the per-seed stream — uncertainty comes from run count," so I **keep per-seed =
+50k** and only raise the seed count. (If 500k/seed was truly intended, flag and
+I'll extend; kept at 50k to honour "do not lengthen.")
+
+**Seed list (40, not re-rolled — the original 2000–2009 extended contiguously):**
+`2000,2001,…,2039` = `range(2000, 2040)`. Frozen here before the run.
+
+**Grid (fixed before running; every cell reported, including bygari-favourable):**
+- **Precision + H1 (ε sweep):** ε ∈ {0.01, 0.03, 0.10} × **40 seeds × 50k/seed**,
+  same legacy log, same decay constants (0.99/0.98), common random numbers
+  (per-txn outcome draw shared by both routers). The ε=0.03 cell is the 40-seed
+  precision result. Report per cell: switchyard−bygari final diff + bootstrap 95%
+  CI, crossover txn (or none), starved-large-ticket share, and H3 below.
+- **H2 (horizon):** at the ε that is most favourable to switchyard in H1, extend
+  to **2,000,000 txns/seed × 10 seeds** (fewer seeds for runtime; stated).
+  Report whether/where a crossover appears; if none by 2M, say so.
+- **H3 (thin slice):** every cell reports the share of traffic in the starved
+  large-ticket region (>₹5k) and the net switchyard−bygari difference RESTRICTED
+  to that region, alongside the remainder and the overall figure.
+
+No simulator parameters / effect sizes / hyperparameters / latent structure are
+changed. Seeds parallelised across processes; RF `n_jobs=1` in workers to avoid
+thread×process oversubscription (determinism unaffected — each seed's RNG is
+seeded by the seed).
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
