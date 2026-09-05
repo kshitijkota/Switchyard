@@ -442,26 +442,30 @@ true value **40058.9 ₹/1k — the WORST method, below the legacy baseline
 success instead of net revenue costs ≈₹1,705/1k versus `direct` (41763.5). Clean
 evidence that the objective (success vs net revenue) matters.
 
-**A2 — live 500k-txn online race.** `bygari_baseline` **WINS**: final cumulative
-net revenue ₹2,000,806.8/seed vs online switchyard ₹1,998,263.6/seed; difference
-**−₹2,543.2** (switchyard − bygari), CI [−5195.9, +4.4]; **switchyard never
-overtakes** (crossover: none). switchyard's exploration cost ≈₹937/seed.
+**A2 — live 500k-txn online race (10 seeds).** final cumulative net revenue
+bygari ₹2,000,806.8/seed vs online switchyard ₹1,998,263.6/seed; difference
+**−₹2,543.2** (switchyard − bygari), CI **[−5195.9, +4.4]**. The CI **includes
+zero** → by our own crosses-zero rule this is **NO DETECTABLE DIFFERENCE
+(indistinguishable), NOT a bygari win** — earlier wording that called it a
+"bygari win" was a double standard and was corrected (2026-09-05). switchyard
+never overtakes at any recorded point; exploration cost ≈₹937/seed.
 
 **The task's hypothesis was FALSIFIED and I report the reality:** bygari does NOT
 send ~0 traffic to the starved large-ticket region. Its RF *extrapolates pa's
 success high on large tickets and routes INTO pa there* (starved-share rises to
 **0.22**), exactly like `direct`. The online switchyard, whose legacy init
 already reflects pa-large being bad, *avoids* it (starved-share falls to
-**0.09**). So switchyard makes the better large-ticket calls, yet still loses
-overall because (a) its exploration cost and (b) its per-cell online learning
-(no cross-cell generalisation, slow to move off the heavy legacy init) drag it
-below bygari's strong pretrained RF on the 87% non-large traffic.
+**0.09**). So switchyard makes the better large-ticket calls, yet does not pull
+ahead overall because (a) its exploration cost and (b) its per-cell online
+learning (no cross-cell generalisation, slow to move off the heavy legacy init)
+offset that gain on the 87% non-large traffic — leaving the two indistinguishable.
 
 Coherent with the exploration price curve: at ε=0.03 exploration buys honest
-estimates but its cost exceeds the net policy value it discovers over this
-horizon — so a strong pretrained model wins the live race. **This is the
-namesake method losing a comparison, reported at full volume, which is the whole
-point of the project.**
+estimates but does not translate into a detectable net-revenue gain over this
+horizon. **At 10 seeds the two are statistically indistinguishable** — switchyard
+does not pull ahead. Reported at full volume, which is the whole point of the
+project. (A 40-seed re-run + ε/horizon/thin-slice diagnostics follow, to raise
+precision and test whether the design was under-powered against switchyard.)
 
 ### Open questions
 

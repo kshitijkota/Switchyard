@@ -68,7 +68,7 @@ The off-policy value estimators all **overstate their own policy** (ips +2558, s
 
 ---
 
-## Live continuous operation: bygari_baseline vs switchyard — **bygari wins**
+## Live continuous operation: bygari_baseline vs switchyard — **no detectable difference**
 
 Run both as online learners in parallel over 500,000 fresh transactions (10 seeds × 50k), each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit.
 
@@ -80,15 +80,15 @@ Run both as online learners in parallel over 500,000 fresh transactions (10 seed
 | switchyard (net of exploration) | 1,998,263.6 | [1,987,985, 2,008,988] |
 | switchyard − bygari | **−2,543.2** | [−5,195.9, +4.4] |
 
-**`bygari_baseline` finishes ahead and `switchyard` never overtakes** (crossover: none in 500k). The gap is small (~0.13% of revenue) and at the edge of significance, but it is negative for switchyard throughout. switchyard's exploration cost was ₹937/seed.
+The point estimate has `switchyard` ₹2,543/seed behind, but the **95% CI on the difference is [−5,195.9, +4.4] — it includes zero, so by this project's own crosses-zero rule the two are _indistinguishable_ (no detectable difference), not a win for either.** `switchyard` does not overtake at any recorded point; its exploration cost was ₹937/seed. _(This 10-seed run is superseded by a 40-seed re-run + ε/horizon sweep — see the diagnostic re-run below.)_
 
 Why — and note the task's stated hypothesis was **falsified**, reported as-is:
 
 ![starved-region traffic](artifacts/starved_region_traffic.png)
 
-The hypothesis was that `bygari` would send ~0 traffic to the starved large-ticket region and never discover the best option there. It does the **opposite**: its random forest extrapolates pa's success upward on large tickets and routes *into* pa (starved-region share rises to **0.22**), exactly the `direct`-style optimism. The online `switchyard`, whose legacy initialisation already reflects pa being bad on large tickets, *avoids* it (share falls to **0.09**). So switchyard makes the **better large-ticket decisions** — yet still loses overall, because its exploration cost plus its per-cell online learning (no cross-cell generalisation, slow to move off the heavy legacy prior) drag it below `bygari`'s strong pretrained RF on the ~87% of traffic that is not large-ticket.
+The hypothesis was that `bygari` would send ~0 traffic to the starved large-ticket region and never discover the best option there. It does the **opposite**: its random forest extrapolates pa's success upward on large tickets and routes *into* pa (starved-region share rises to **0.22**), exactly the `direct`-style optimism. The online `switchyard`, whose legacy initialisation already reflects pa being bad on large tickets, *avoids* it (share falls to **0.09**). So switchyard makes the **better large-ticket decisions** — yet does not pull ahead overall, because its exploration cost plus its per-cell online learning (no cross-cell generalisation, slow to move off the heavy legacy prior) offset that gain on the ~87% of traffic that is not large-ticket, leaving the two indistinguishable.
 
-This is coherent with the exploration price curve: at ε = 0.03, exploration buys **honest estimates** but its cost exceeds the **net policy value** it discovers over this horizon, so a strong pretrained model wins the live race. **The method this project is named after loses this comparison; that is reported here at full size because the entire claim is about not fooling yourself.**
+This is coherent with the exploration price curve: at ε = 0.03, exploration buys **honest estimates** but its cost does not translate into a detectable **net-revenue** gain over this horizon. **At 10 seeds the two are statistically indistinguishable — `switchyard` does not pull ahead of a strong pretrained model — reported here at full size because the entire claim is about not fooling yourself.**
 
 ---
 
