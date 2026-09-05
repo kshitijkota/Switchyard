@@ -7,12 +7,48 @@
 
 ---
 
+## Money recovered by the recovery loop
+
+When a payment fails, Switchyard's routing brain decides whether and where to re-attempt. Over **5,000 simulated payment failures**, switchyard's smart rerouting recovers **₹6,361.63 more** than the legacy retry policy — **127.23 paise/failure**, 95% CI **[113.22, 140.84]**, which excludes zero.
+
+**Stopping rules** (enforced; live engine over the 5,000 failures): never re-attempt if expected net reward ≤ 0, at most 3 attempts, never re-attempt a hard decline. Outcomes: **3,489 recovered**, 1,447 hard declines correctly not retried, 51 hit the attempt cap, 13 stopped on non-positive expected reward. Every attempt is appended to `artifacts/audit.jsonl`.
+
+**Idempotency:** a SQLite table with `txn_id` primary key + a `PENDING` reservation; the 10-concurrent-identical-events test yields exactly one attempt, and replaying a processed failure creates no second attempt.
+
+**Compliance:** an attempt cap and a minimum inter-attempt delay for e-mandate-style (netbanking) failures are enforced. **RBI 24-hour pre-debit notification is NOT implemented** — a real gap a production system would need.
+
+---
+
+## Where semantics actually matter: an open-world test (rule vs trained model vs LLM)
+
+The closed-world result (a rule at 0.923 matching gpt-4o-mini at 0.846), reported in the diagnosis section below, is real but says little — seven documented codes and five fixed categories are a lookup, not an interpretation. So we add a **held-out open-world set** the rule cannot be pre-written for, and a **third method** — a small trained classifier (multinomial logistic regression on documented-code shares) — that sits between the rule and the LLM. The open-world cohorts (labels fixed before any method ran) contain: **real NPCI/Razorpay codes withheld** from the table and the classifier's training (`Z8`, `U16`, `bank_not_available`, `psp_app_not_available`, `gateway_technical_error`); **free-text gateway messages** with no code; a **red herring** (the ambiguous `U30` dominates, the true signal is a minority code); and **two-cause blends**.
+
+**Prediction, stated before the results:** rules and trained models should **win closed-world and fail open-world** (they can only match patterns they were given); the LLM should **lose closed-world and generalise open-world** (it can interpret an unfamiliar code or a free-text message from world knowledge).
+
+**What actually happened** — accuracy on clear cohorts (harmful-error rate in parentheses):
+
+| Method | Closed-world | Open-world |
+|---|---:|---:|
+| Hand-written rule | 0.923 (0.10) | **0.000** (0.10) |
+| Trained classifier (LR on code shares) | **1.000** (0.00) | 0.125 (0.40) |
+| LLM (gpt-4o-mini) | 0.846 (0.10) | **0.625** (0.30) |
+
+**The prediction held.** Closed-world, the trained classifier is perfect (1.000) and the rule strong (0.923) — both beat the LLM (0.846). Open-world, both collapse and the **LLM is the only method that generalises** (0.625 vs 0.000 / 0.125): it reads `bank_not_available`, `Z8` and every free-text cohort correctly from knowledge it was never given in a table. And the two failures are different in a way that mirrors this whole project: the **rule fails safe** — it abstains (0.0 accuracy, but only 0.10 harmful), correctly refusing to interpret codes it doesn't recognise; the **trained model fails dangerously** — it extrapolates its closed-world mapping onto inputs it never saw and asserts a **confident wrong cause 40% of the time** (0.40 harmful), the same optimism-under-distribution-shift that the routing half of this project is about. The LLM is not clean either (0.30 harmful — it misreads `psp_app_not_available` and `gateway_technical_error` as customer-side, and over-asserts on one blend), and it does **not** win closed-world.
+
+**Abstention attribution.** The diagnoser's headline abstention is mostly deterministic engineering, not model judgment. On the closed-world ambiguous cohorts the model abstains **0.714 including the sample-size guardrail**, but **4 of those 5 abstentions are the guardrail** — a hard "abstain below 40 failures, no model call" gate. The model's **own** abstention, on the cohorts that actually reached it, is **0.188** (3 of 16). The guardrail was added after three prompt variants failed to move the number (the model kept asserting on tiny cohorts, abstention stuck at 0.167) — deterministic engineering, not model behaviour.
+
+*Reproduce:* `python -m diagnose.threeway` (rule and trained classifier need no key; the LLM reproduces from the committed OpenAI cache). All open-world inputs are synthetic; only the withheld codes and their meanings are real.
+
+---
+
 ## Headline
+
+The routing half of the project measures the same distribution-shift failure in rupees.
 
 Point each estimator at a routing policy that relies on the region the legacy policy never explored, and ask what it's worth — the truth is known by simulation.
 
 - On an **adversarial policy that routes _all_ large tickets to `pa`** — a genuine money-loser, true value **₹38,974 / 1k** attempts, *below* the ₹40,117 legacy baseline — **`direct` values it ₹1,954/1k too high.** It would green-light the loser with no warning signal.
-- On **`direct`'s own deployed greedy policy** (true value ₹41,763/1k), **`switchyard` is off by just ₹17.3/1k** — while `direct` overstates by ₹646.5 and plain IPS is off by ₹2,100.7. Switchyard is the only estimator you can trust into the unexplored region.
+- On **`direct`'s own deployed greedy policy** (true value ₹41,763/1k), **`switchyard` is off by just ₹17.3/1k** — while `direct` overstates by ₹646.5 and plain IPS is off by ₹2,100.7. Switchyard has the lowest estimation error among the tested estimators in this unexplored region.
 
 That honesty is bought by a 3% exploration budget, and the next section prices it.
 
@@ -51,7 +87,7 @@ Because the phenomenon only bites in unexplored regions, the simulator's one hid
 
 ## Results table
 
-Methods learned from the same 200,000 confounded legacy logs (`switchyard` additionally gets a 200k epoch with 3% of decisions randomised). `bygari_baseline` is a faithful reimplementation of the published Razorpay router (Bygari et al., IEEE Big Data 2021) that routes on predicted **success**. True value is by simulator rollout (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
+Methods learned from the same 200,000 confounded legacy logs (`switchyard` additionally gets a 200k epoch with 3% of decisions randomised). `bygari_baseline` is a faithful reimplementation of the routing architecture described in Bygari et al. (2021) that routes on predicted **success**. True value is by simulator rollout (10 seeds, common random numbers, 1000-resample paired bootstrap). All values are **₹ per 1,000 attempts**.
 
 | Method | Estimated | True | Estimation error | True 95% CI | Improvement over legacy (CI) | Weights clipped |
 |---|---:|---:|---:|:---:|:---:|---:|
@@ -141,18 +177,6 @@ On `hdfc × upi`, `pa` has the highest success rate (0.95 vs pb 0.86, pc 0.85) y
 
 ---
 
-## Money recovered by the recovery loop
-
-When a payment fails, the same routing brain decides whether and where to re-attempt. Over **5,000 real failures**, switchyard's smart rerouting recovers **₹6,361.63 more** than the legacy retry policy — **127.23 paise/failure**, 95% CI **[113.22, 140.84]**, which excludes zero.
-
-**Stopping rules** (enforced; live engine over the 5,000 failures): never re-attempt if expected net reward ≤ 0, at most 3 attempts, never re-attempt a hard decline. Outcomes: **3,489 recovered**, 1,447 hard declines correctly not retried, 51 hit the attempt cap, 13 stopped on non-positive expected reward. Every attempt is appended to `artifacts/audit.jsonl`.
-
-**Idempotency:** a SQLite table with `txn_id` primary key + a `PENDING` reservation; the 10-concurrent-identical-events test yields exactly one attempt, and replaying a processed failure creates no second attempt.
-
-**Compliance:** an attempt cap and a minimum inter-attempt delay for e-mandate-style (netbanking) failures are enforced. **RBI 24-hour pre-debit notification is NOT implemented** — a real gap a production system would need.
-
----
-
 ## Diagnosis component (LLM) and its scores
 
 A single contained job (never routes): given a cohort's failure-code counts and a baseline comparison, output structured JSON `{cause, confidence, evidence}` or abstain with `INSUFFICIENT_EVIDENCE`. Output is schema-validated with a fallback to `INSUFFICIENT_EVIDENCE` on any malformed response, and cached by input hash. A **sample-size guardrail** abstains deterministically (no model call) on cohorts below 40 failures — a production diagnoser must not attribute a cause from a handful of events. **Abstention is rewarded, not penalised**, because a calibrated "I don't know" is the correct answer for an un-diagnosable cohort and is strictly better than a confident wrong guess.
@@ -170,31 +194,9 @@ A single contained job (never routes): given a cohort's failure-code counts and 
 
 **Both correctly abstain on the genuinely-ambiguous `U30` cohort** — the code names two causes, and neither the model nor the rule invents one. That is the headline of the real-code change, and it is the point of the ambiguity: a U30-dominated window is un-diagnosable, and both the model and the rule say so.
 
-Beyond that, a hand-written rule (0.923) still slightly edges gpt-4o-mini (0.846) on clear-accuracy, with **identical** abstention (0.714) and harmful rates (0.100). The two make the *same* two harmful errors — the constructed two-cause blends, where each confidently names the larger cause instead of abstaining. The only difference is on the customer-baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is a defensible read): the rule abstains on one of them, gpt-4o-mini on two, which separates 0.923 from 0.846. The offline rule is not a language model. That a small LLM does not beat a fixed seven-code lookup here — even with real codes — is what motivates the open-world test below.
+Beyond that, a hand-written rule (0.923) still slightly edges gpt-4o-mini (0.846) on clear-accuracy, with **identical** abstention (0.714) and harmful rates (0.100). The two make the *same* two harmful errors — the constructed two-cause blends, where each confidently names the larger cause instead of abstaining. The only difference is on the customer-baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is a defensible read): the rule abstains on one of them, gpt-4o-mini on two, which separates 0.923 from 0.846. The offline rule is not a language model. That a small LLM does not beat a fixed seven-code lookup here — even with real codes — is what motivates the open-world test above.
 
 **Disclosure:** provider OpenAI, model `gpt-4o-mini`; 9,779 input / 1,141 output tokens; **estimated cost $0.0022** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Gemini and Anthropic paths stay selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
-
----
-
-## Where semantics actually matter: an open-world test (rule vs trained model vs LLM)
-
-The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is real but says little — seven documented codes and five fixed categories are a lookup, not an interpretation. So we add a **held-out open-world set** the rule cannot be pre-written for, and a **third method** — a small trained classifier (multinomial logistic regression on documented-code shares) — that sits between the rule and the LLM. The open-world cohorts (labels fixed before any method ran) contain: **real NPCI/Razorpay codes withheld** from the table and the classifier's training (`Z8`, `U16`, `bank_not_available`, `psp_app_not_available`, `gateway_technical_error`); **free-text gateway messages** with no code; a **red herring** (the ambiguous `U30` dominates, the true signal is a minority code); and **two-cause blends**.
-
-**Prediction, stated before the results:** rules and trained models should **win closed-world and fail open-world** (they can only match patterns they were given); the LLM should **lose closed-world and generalise open-world** (it can interpret an unfamiliar code or a free-text message from world knowledge).
-
-**What actually happened** — accuracy on clear cohorts (harmful-error rate in parentheses):
-
-| Method | Closed-world | Open-world |
-|---|---:|---:|
-| Hand-written rule | 0.923 (0.10) | **0.000** (0.10) |
-| Trained classifier (LR on code shares) | **1.000** (0.00) | 0.125 (0.40) |
-| LLM (gpt-4o-mini) | 0.846 (0.10) | **0.625** (0.30) |
-
-**The prediction held.** Closed-world, the trained classifier is perfect (1.000) and the rule strong (0.923) — both beat the LLM (0.846). Open-world, both collapse and the **LLM is the only method that generalises** (0.625 vs 0.000 / 0.125): it reads `bank_not_available`, `Z8` and every free-text cohort correctly from knowledge it was never given in a table. And the two failures are different in a way that mirrors this whole project: the **rule fails safe** — it abstains (0.0 accuracy, but only 0.10 harmful), correctly refusing to interpret codes it doesn't recognise; the **trained model fails dangerously** — it extrapolates its closed-world mapping onto inputs it never saw and asserts a **confident wrong cause 40% of the time** (0.40 harmful), the same optimism-under-distribution-shift that the routing half of this project is about. The LLM is not clean either (0.30 harmful — it misreads `psp_app_not_available` and `gateway_technical_error` as customer-side, and over-asserts on one blend), and it does **not** win closed-world.
-
-**Abstention attribution.** The diagnoser's headline abstention is mostly deterministic engineering, not model judgment. On the closed-world ambiguous cohorts the model abstains **0.714 including the sample-size guardrail**, but **4 of those 5 abstentions are the guardrail** — a hard "abstain below 40 failures, no model call" gate. The model's **own** abstention, on the cohorts that actually reached it, is **0.188** (3 of 16). The guardrail was added after three prompt variants failed to move the number (the model kept asserting on tiny cohorts, abstention stuck at 0.167) — deterministic engineering, not model behaviour.
-
-*Reproduce:* `python -m diagnose.threeway` (rule and trained classifier need no key; the LLM reproduces from the committed OpenAI cache). All open-world inputs are synthetic; only the withheld codes and their meanings are real.
 
 ---
 
@@ -206,7 +208,7 @@ The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
 6. **On the closed-world, real-code diagnosis task a hand-written rule still slightly beats the small LLM** (rule 0.923 vs gpt-4o-mini 0.846 clear-accuracy; identical 0.714 abstention and 0.100 harmful — the *same* two blend errors): both correctly abstain on the genuinely-ambiguous `U30` code, both over-assert on the two-cause blends, and the gap is only that gpt-4o-mini abstains on one extra baseline window. A fixed seven-code lookup is simple enough that a small LLM does not beat it here — even with real codes — which is what the open-world test is for.
-7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It does **not pull ahead of** `bygari_baseline` in the live race — the two are statistically indistinguishable (the difference CI includes zero); a model-based online learner might do better, but that was not the committed design and is not claimed.
+7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). Over the 50k-transaction window it is statistically indistinguishable from `bygari_baseline` (at ε = 0.01 and 0.03 the difference CI includes zero); at 2,000,000 transactions/seed it pulls clearly ahead (+₹377,210.8/seed, CI excluding zero), with the crossover at ≈160,000 transactions. A model-based online learner might close the short-horizon gap, but that was not the committed design and is not claimed.
 8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
 ---
@@ -226,7 +228,7 @@ python verify.py          # runs tests, regenerates every artifact, reprints eve
 
 The routing machinery here is established; **this project's contribution is the evaluation layer** — measuring when a model trained on logged routing decisions can and cannot be trusted, and pricing the exploration that fixes it.
 
-- **Razorpay's published router** — Bygari et al., *"An AI-powered Smart Routing Solution for Payment Systems,"* IEEE Big Data 2021 — **reimplemented here as `bygari_baseline`** (static eligibility + LR downtime breaker; dynamic RF success-router with time-decay feedback) and run head-to-head above.
+- **Routing architecture** — the design reimplemented here as `bygari_baseline` (static eligibility + LR downtime breaker; dynamic RF success-router with time-decay feedback), run head-to-head above, follows the routing architecture described in Bygari et al. (2021): Ramya Bygari, Aayush Gupta, Shashwat Raghuvanshi, Aakanksha Bapna and Birendra Sahu, *"An AI-powered Smart Routing Solution for Payment Systems,"* 2021 IEEE International Conference on Big Data (Big Data); the authors are affiliated with Razorpay, Bengaluru.
 - **Failure codes** — NPCI *UPI Error and Response Codes* (v2.9) and Razorpay's documented payment error codes are used verbatim for the failure taxonomy (see `DECISIONS.md` for URLs and retrieval dates); only the codes and meanings are real, the outcomes remain simulated.
 - **PayU** — payment success-rate routing, WWW 2018.
 - **Juspay** — payment orchestration / smart routing (industry).
