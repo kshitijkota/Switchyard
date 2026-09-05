@@ -28,14 +28,15 @@ from dataclasses import dataclass, field
 import jsonschema
 
 from diagnose.schema import (
-    CAUSE_CLASSES, CODE_MEANING, INSUFFICIENT, OUTPUT_SCHEMA, VALID_OUTPUTS,
+    CAUSE_AMBIGUOUS, CAUSE_CLASSES, CODE_MEANING, INSUFFICIENT, OUTPUT_SCHEMA,
+    VALID_OUTPUTS,
 )
 
 _ROOT = os.path.dirname(os.path.dirname(__file__))
 CACHE_DIR = os.path.join(_ROOT, "diagnose", "cache")
 INCIDENT_LOG = os.path.join(_ROOT, "diagnose", "cache", "incidents.log")
 LLM_MODEL = os.environ.get("SWITCHYARD_DIAGNOSE_MODEL", "claude-opus-5")
-PROMPT_VERSION = "v4-shares-dominance"   # bump to invalidate the cache when build_prompt changes
+PROMPT_VERSION = "v5-real-codes-ambiguous"   # bump to invalidate the cache when build_prompt or the code set changes
 MIN_COHORT_FAILURES = 40   # sample-size guardrail: below this the diagnoser abstains
 
 
@@ -154,6 +155,10 @@ def build_prompt(inp: "DiagnosisInput") -> str:
         "Group codes by the cause each implies and find the cause with the largest cohort "
         "share; the baseline column shows what is normal, so a cause standing well above "
         "its baseline share is a strong signal.\n"
+        f"   Codes marked '→ {CAUSE_AMBIGUOUS}' name two possible causes in their own "
+        "documentation and so identify NONE on their own; they are not a valid answer. If "
+        "such codes dominate the cohort and no genuine cause clearly stands out beneath "
+        "them, return INSUFFICIENT_EVIDENCE.\n"
         "3. Assert that one cause only if it is CLEARLY the dominant failure mode (well "
         "ahead of the others). If no cause clearly dominates, or two causes are comparably "
         "large, return INSUFFICIENT_EVIDENCE.\n"
@@ -204,7 +209,12 @@ class StatisticalProvider:
         total = sum(counts.values()) or 1
         share = {c: 0.0 for c in CAUSE_CLASSES}
         for code, n in counts.items():
-            share[CODE_MEANING[code][1]] += n / total
+            cause = CODE_MEANING[code][1]
+            if cause in share:
+                share[cause] += n / total
+            # else: ambiguous code (e.g. U30) — its mass is unattributable and
+            # counts toward no cause, so a cohort dominated by it shows no elevated
+            # cause and the provider abstains (INSUFFICIENT_EVIDENCE) below.
         return share
 
     def diagnose(self, inp: DiagnosisInput) -> dict:

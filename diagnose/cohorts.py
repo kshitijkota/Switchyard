@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from diagnose.schema import CAUSE_CUSTOMER, INSUFFICIENT
 from events import read_jsonl
-from sim.ground_truth import REGIME_TRUE_CAUSE
+from sim.ground_truth import AMBIGUOUS_CODE, REGIME_TRUE_CAUSE
 
 _ROOT = os.path.dirname(os.path.dirname(__file__))
 LOGS_PATH = os.path.join(_ROOT, "data", "logs.jsonl")
@@ -90,5 +90,17 @@ def build_cohorts(seed: int = 0):
         if len(ca) >= 40 and len(cb) >= 40:
             cohorts.append(Cohort(f"{a}+{b} even blend", "a 4h window",
                                   dict(Counter(ca + cb)), INSUFFICIENT, "ambiguous"))
+
+    # Ambiguous #3 (TASK B — code-level ambiguity): a window dominated by the
+    # genuinely-ambiguous NPCI code U30 ("debit failed: bank down OR debit issue").
+    # Pooled across ALL regimes so no single true cause underlies it; the code's
+    # own published meaning names two causes, so it is undiagnosable from the code
+    # distribution — the correct answer is INSUFFICIENT_EVIDENCE.
+    u30 = [c for codes in by_regime.values() for c in codes if c == AMBIGUOUS_CODE]
+    if len(u30) >= CLEAR_SIZE:
+        ambient = [c for c in by_regime.get("baseline", []) if c != AMBIGUOUS_CODE][:20]
+        counts = Counter(u30[:CLEAR_SIZE]) + Counter(ambient)
+        cohorts.append(Cohort("U30 debit-failure surge (ambiguous code)", "a 4h window",
+                              dict(counts), INSUFFICIENT, "ambiguous"))
 
     return cohorts, dict(baseline_counts)

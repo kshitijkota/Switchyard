@@ -14,22 +14,31 @@ CAUSE_MERCHANT = "MERCHANT_INTEGRATION"
 CAUSE_NETWORK = "NETWORK_TRANSIENT"
 CAUSE_CUSTOMER = "CUSTOMER_SIDE"
 INSUFFICIENT = "INSUFFICIENT_EVIDENCE"
+# A code whose published meaning names more than one cause (e.g. NPCI U30, "debit
+# failed: bank down OR debit issue"). It is NOT a valid diagnosis output — the
+# correct answer on a cohort dominated by such codes is INSUFFICIENT_EVIDENCE.
+CAUSE_AMBIGUOUS = "AMBIGUOUS"
 
 CAUSE_CLASSES = (CAUSE_ISSUER, CAUSE_MERCHANT, CAUSE_NETWORK, CAUSE_CUSTOMER)
 VALID_OUTPUTS = CAUSE_CLASSES + (INSUFFICIENT,)
 
-# Documented public meaning of each code (the code's label, known to any operator)
-# and the cause family it belongs to. Not latent truth — a code's meaning is
-# printed in the API docs.
+# Documented PUBLIC meaning of each code (its label as printed in the NPCI /
+# Razorpay docs — TASK B) and the cause family that meaning implies. This is not
+# latent truth; it is what any operator reads off the code. Codes marked
+# CAUSE_AMBIGUOUS name two causes in their own documentation and so identify none.
 CODE_MEANING = {
-    "U30": ("bank declined", CAUSE_ISSUER),
-    "U69": ("insufficient funds", CAUSE_CUSTOMER),
-    "U16": ("risk rejected", CAUSE_CUSTOMER),
-    "BAD_REQUEST_ERROR": ("malformed request", CAUSE_MERCHANT),
-    "GATEWAY_ERROR": ("gateway error", CAUSE_NETWORK),
-    "U67": ("timeout at PSP", CAUSE_NETWORK),
+    # NPCI UPI response codes
+    "U28": ("remitter/customer bank (PSP) unavailable", CAUSE_ISSUER),
+    "Z9":  ("insufficient funds in the customer's account", CAUSE_CUSTOMER),
+    "U69": ("collect request expired — customer did not approve in time", CAUSE_CUSTOMER),
+    "U30": ("debit failed — customer's bank is down OR a technical debit failure", CAUSE_AMBIGUOUS),
+    # Razorpay card / netbanking error codes
+    "BAD_REQUEST_ERROR": ("invalid request — integration/merchant error", CAUSE_MERCHANT),
+    "GATEWAY_ERROR":     ("payment gateway/bank transient error (retryable)", CAUSE_NETWORK),
+    "SERVER_ERROR":      ("internal transient error at gateway/Razorpay (retryable)", CAUSE_NETWORK),
 }
 CODES = tuple(CODE_MEANING)
+AMBIGUOUS_CODES = tuple(c for c, (_m, cause) in CODE_MEANING.items() if cause == CAUSE_AMBIGUOUS)
 
 OUTPUT_SCHEMA = {
     "type": "object",

@@ -30,7 +30,7 @@ from events import PROCESSORS, Context, Decision
 from recovery.store import IdempotencyStore
 
 MAX_ATTEMPTS = 3
-HARD_DECLINE_CODES = frozenset({"U16"})   # risk-rejected / expired instrument
+HARD_DECLINE_CODES = frozenset({"Z9"})   # insufficient funds — retrying elsewhere cannot create funds
 EMANDATE_MIN_DELAY = timedelta(hours=1)
 POLICY_VERSION = "switchyard-recovery-v1"
 

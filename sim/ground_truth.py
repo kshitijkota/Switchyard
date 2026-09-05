@@ -83,21 +83,41 @@ CAUSE_NETWORK = "NETWORK_TRANSIENT"
 CAUSE_CUSTOMER = "CUSTOMER_SIDE"
 CAUSE_CLASSES = (CAUSE_ISSUER, CAUSE_MERCHANT, CAUSE_NETWORK, CAUSE_CUSTOMER)
 
-# The §3.1 mapping — code -> true cause class. Ground truth, hence it lives here.
+# Real published failure codes (TASK B). UPI path uses NPCI UPI response codes;
+# card/netbanking uses Razorpay's documented error codes. Sources + retrieval
+# dates are cited in DECISIONS.md. This code -> true-cause map is GROUND TRUTH and
+# lives here only; the event log the models consume carries the bare code string,
+# never the cause. `CAUSE_AMBIGUOUS` marks a code whose cause is genuinely not
+# determinable from the code alone (its own published meaning names two causes).
+CAUSE_AMBIGUOUS = "AMBIGUOUS"
+
 CODE_TO_CAUSE = {
-    "U30": CAUSE_ISSUER,
-    "U69": CAUSE_CUSTOMER,
-    "U16": CAUSE_CUSTOMER,
-    "BAD_REQUEST_ERROR": CAUSE_MERCHANT,
-    "GATEWAY_ERROR": CAUSE_NETWORK,
-    "U67": CAUSE_NETWORK,
+    # NPCI UPI response codes
+    "U28": CAUSE_ISSUER,      # remitter/customer bank (PSP) is down
+    "Z9":  CAUSE_CUSTOMER,    # insufficient funds in the customer's account
+    "U69": CAUSE_CUSTOMER,    # collect request expired (customer took too long)
+    "U30": CAUSE_AMBIGUOUS,   # "debit failed: bank down OR debit issue" — undiagnosable
+    # Razorpay card / netbanking error codes
+    "BAD_REQUEST_ERROR": CAUSE_MERCHANT,  # invalid request (integration/merchant)
+    "GATEWAY_ERROR":     CAUSE_NETWORK,   # transient gateway/bank error, retryable
+    "SERVER_ERROR":      CAUSE_NETWORK,   # transient internal error, retryable
 }
+# Codes each cause draws from when a failure is attributed to it. The ambiguous
+# code U30 is NOT here — it is emitted from BOTH issuer and network failures (see
+# sample_outcome), so a U30-dominated cohort cannot be told apart.
 CAUSE_TO_CODES = {
-    CAUSE_ISSUER: ("U30",),
-    CAUSE_CUSTOMER: ("U69", "U16"),
-    CAUSE_NETWORK: ("GATEWAY_ERROR", "U67"),
+    CAUSE_ISSUER:   ("U28",),
+    CAUSE_CUSTOMER: ("Z9", "U69"),
+    CAUSE_NETWORK:  ("GATEWAY_ERROR", "SERVER_ERROR"),
     CAUSE_MERCHANT: ("BAD_REQUEST_ERROR",),
 }
+AMBIGUOUS_CODE = "U30"
+AMBIGUOUS_CAUSES = (CAUSE_ISSUER, CAUSE_NETWORK)
+# Fraction of issuer/network failures that surface as the ambiguous U30 ("debit
+# failed") instead of the clean cause-specific code. Chosen up front (NOT tuned to
+# any result): large enough to build a genuinely-ambiguous U30 cohort, small
+# enough that the clear issuer/network cohorts stay dominated by their own codes.
+AMBIGUOUS_EMIT_PROB = 0.35
 
 # Baseline mixture of failure causes (what the ambient failures look like).
 _BASE_MIX = {CAUSE_CUSTOMER: 0.55, CAUSE_NETWORK: 0.25, CAUSE_ISSUER: 0.12, CAUSE_MERCHANT: 0.08}
@@ -168,8 +188,15 @@ def sample_outcome(context: Context, processor: str, rng: np.random.Generator):
     weights = np.array([mix[c] for c in causes], dtype=np.float64)
     weights /= weights.sum()
     cause = causes[int(rng.choice(len(causes), p=weights))]
-    codes = CAUSE_TO_CODES[cause]
-    code = codes[int(rng.integers(len(codes)))]
+    # Some issuer/network failures surface as the ambiguous U30 ("debit failed"),
+    # whose published meaning names two possible causes — so the code alone cannot
+    # attribute them. The latent true_cause is still recorded (issuer or network);
+    # only the observable code is ambiguous.
+    if cause in AMBIGUOUS_CAUSES and rng.random() < AMBIGUOUS_EMIT_PROB:
+        code = AMBIGUOUS_CODE
+    else:
+        codes = CAUSE_TO_CODES[cause]
+        code = codes[int(rng.integers(len(codes)))]
     return False, code, cause
 
 

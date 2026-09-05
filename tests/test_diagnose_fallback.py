@@ -22,7 +22,7 @@ class _GarbageProvider:
 
 
 def _inp():
-    return DiagnosisInput("c", "w", {"U30": 50, "U69": 10}, {"U30": 12, "U69": 55})
+    return DiagnosisInput("c", "w", {"U28": 50, "U69": 10}, {"U28": 12, "U69": 55})
 
 
 def test_schema_failure_falls_back(tmp_path):
@@ -39,13 +39,25 @@ def test_non_dict_output_falls_back(tmp_path):
 
 def test_statistical_abstains_on_tiny_cohort(tmp_path):
     d = Diagnoser(provider=StatisticalProvider(), cache_dir=str(tmp_path))
-    out = d.diagnose(DiagnosisInput("tiny", "w", {"U30": 5, "U69": 3},
-                                    {"U30": 12, "U69": 55}), use_cache=False)
+    out = d.diagnose(DiagnosisInput("tiny", "w", {"U28": 5, "U69": 3},
+                                    {"U28": 12, "U69": 55}), use_cache=False)
     assert out["cause"] == INSUFFICIENT   # too few failures to conclude
 
 
 def test_statistical_detects_clear_issuer_spike(tmp_path):
     d = Diagnoser(provider=StatisticalProvider(), cache_dir=str(tmp_path))
-    out = d.diagnose(DiagnosisInput("issuer", "w", {"U30": 70, "U69": 10, "GATEWAY_ERROR": 5},
-                                    {"U30": 12, "U69": 55, "GATEWAY_ERROR": 20}), use_cache=False)
+    out = d.diagnose(DiagnosisInput("issuer", "w", {"U28": 70, "U69": 10, "GATEWAY_ERROR": 5},
+                                    {"U28": 12, "U69": 55, "GATEWAY_ERROR": 20}), use_cache=False)
     assert out["cause"] == "ISSUER_DEGRADATION"
+
+
+def test_statistical_abstains_on_ambiguous_code(tmp_path):
+    # TASK B: a cohort dominated by the genuinely-ambiguous U30 ("debit failed:
+    # bank down OR debit issue") has no readable cause -> must abstain, even though
+    # it is well above the sample-size guardrail.
+    d = Diagnoser(provider=StatisticalProvider(), cache_dir=str(tmp_path))
+    out = d.diagnose(DiagnosisInput("u30 surge", "w",
+                                    {"U30": 75, "U69": 8, "GATEWAY_ERROR": 5},
+                                    {"U30": 20, "U69": 55, "GATEWAY_ERROR": 20, "U28": 5}),
+                     use_cache=False)
+    assert out["cause"] == INSUFFICIENT   # ambiguous code dominates; no cause attributable

@@ -24,12 +24,15 @@ PROCESSORS = ("pa", "pb", "pc")
 # to *true cause class* lives in sim.ground_truth ONLY; it must never appear in
 # an event log the models consume.
 FAILURE_CODES = (
-    "U30",               # bank declined
-    "U69",               # insufficient funds
-    "U16",               # risk rejected (hard decline)
-    "BAD_REQUEST_ERROR",  # merchant integration
-    "GATEWAY_ERROR",     # network transient
-    "U67",               # timeout at PSP
+    # NPCI UPI response codes (real; see DECISIONS.md)
+    "U28",               # remitter/customer bank (PSP) down  -> issuer
+    "Z9",                # insufficient funds                 -> customer
+    "U69",               # collect request expired            -> customer
+    "U30",               # "debit failed: bank down OR debit issue" -> AMBIGUOUS
+    # Razorpay card/netbanking error codes (real)
+    "BAD_REQUEST_ERROR",  # invalid request (integration)     -> merchant
+    "GATEWAY_ERROR",     # transient gateway/bank error       -> network
+    "SERVER_ERROR",      # transient internal error           -> network
 )
 
 

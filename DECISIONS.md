@@ -56,3 +56,40 @@ Design rationale. Expanded as each component lands (AGENT_BRIEF §11).
   (In this build environment no API key was available, so the reported numbers
   come from the deterministic offline statistical diagnoser; the LLM path runs
   and is scored identically when ANTHROPIC_API_KEY is set.)
+- **Real published failure codes (TASK B).** The failure taxonomy is no longer
+  invented. The UPI path uses NPCI's published UPI response codes; the
+  card/netbanking path uses Razorpay's documented payment error codes. Only the
+  failure codes and their documented meanings are real — routing outcomes,
+  success probabilities and costs remain simulated with known latent ground
+  truth. Codes and meanings used:
+  - `U28` — remitter/customer bank (PSP) unavailable → ISSUER_DEGRADATION
+  - `Z9` — insufficient funds in the customer's account → CUSTOMER_SIDE
+  - `U69` — collect request expired, customer did not approve in time → CUSTOMER_SIDE
+  - `U30` — "debit has failed … the customer's bank is down **or** there is an
+    issue debiting the account" → **genuinely AMBIGUOUS** (issuer outage vs a
+    technical debit failure). Its own published description names two causes, so
+    it identifies none; a cohort dominated by U30 is un-diagnosable and the
+    correct diagnosis is INSUFFICIENT_EVIDENCE.
+  - `BAD_REQUEST_ERROR` — invalid request / integration error (source=business) → MERCHANT_INTEGRATION
+  - `GATEWAY_ERROR` — transient gateway/bank error, retryable (source=gateway) → NETWORK_TRANSIENT
+  - `SERVER_ERROR` — transient internal error, retryable → NETWORK_TRANSIENT
+  The code→true-cause map lives in `sim/ground_truth.py` only; the event log the
+  models consume carries the bare code string. U30 is emitted from **both**
+  issuer and network failures (`AMBIGUOUS_EMIT_PROB=0.35`, chosen up front, not
+  tuned) so a U30-dominated cohort genuinely mixes two causes. The recovery
+  engine's non-retryable "hard decline" is now `Z9` (insufficient funds — routing
+  the same payment elsewhere cannot create funds), replacing the old `U16`.
+  Sources (retrieved 2026-09-05):
+  - NPCI UPI codes cross-checked against Razorpay's guide "Tackling UPI Payment
+    Failures" — https://razorpay.com/blog/tackling-upi-payment-failures-with-razorpay/
+    (verbatim: U69 "collect request expired as the customer took more time to
+    complete the payment"; Z9 "insufficient funds"; U28 "customer's bank … is
+    down"; U30 "debit has failed. This can happen if the customer's bank is down
+    or there is any issue in debiting the bank account") — and the canonical NPCI
+    "UPI Error and Response Codes v2.9"
+    (https://dth95m2xtyv8v.cloudfront.net/tesseract/assets/upi-tpap-sdk/UPI_Error_and_Response_Codes_2_9-HHLrJ.pdf).
+  - Razorpay payment error codes, sources and reasons —
+    https://razorpay.com/docs/errors/payments/list/ and
+    https://razorpay.com/docs/errors/ (source field values customer / business /
+    gateway / razorpay; reasons e.g. payment_failed, insufficient_funds,
+    bank_not_available, gateway_technical_error, payment_method_not_enabled).

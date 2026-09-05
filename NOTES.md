@@ -556,6 +556,46 @@ Net honest finding: this simple online switchyard is not a free win vs a strong
 pretrained success-router — indistinguishable over 50k, strictly worse at high ε,
 worse in the starved region it was meant to fix, decisively ahead only at 2M.
 
+### 2026-09-05 — TASK B: real NPCI + Razorpay failure codes (design locked before eval)
+
+Replaced the invented failure taxonomy with real published codes. Design fixed
+and committed BEFORE running the diagnosis eval (governing rule).
+
+**Codes used (real; sources + verbatim meanings in DECISIONS.md, retrieved 2026-09-05):**
+- UPI (NPCI): `U28` issuer/PSP down → ISSUER; `Z9` insufficient funds → CUSTOMER;
+  `U69` collect expired → CUSTOMER; `U30` "debit failed: bank down OR debit issue"
+  → **AMBIGUOUS**.
+- Card/netbanking (Razorpay): `BAD_REQUEST_ERROR` → MERCHANT; `GATEWAY_ERROR`,
+  `SERVER_ERROR` → NETWORK (transient/retryable).
+
+**Codes dropped from the old invented set:** `U16` ("risk rejected") and `U67`
+("timeout at PSP"). U16's non-retryable role (hard decline) is taken over by the
+real `Z9` (insufficient funds — retrying elsewhere cannot create funds). U67's
+network-timeout role is covered by the real Razorpay `GATEWAY_ERROR`/`SERVER_ERROR`
+(and NPCI U30's timeout facet folds into the ambiguous bucket). Real NPCI codes
+NOT included, to keep one clean code per public meaning: `Z7`/`Z8` (bank velocity
+/ per-txn limits — genuine but redundant with Z9 as a customer-side signal), `U16`
+risk, `U09`/`U54`/`U66` (assorted); documented here as deliberately omitted, not
+overlooked.
+
+**Ambiguity mechanism.** U30 is emitted from BOTH issuer and network failures
+(`AMBIGUOUS_EMIT_PROB=0.35` in `sim/ground_truth.py`, chosen up front). A cohort
+pooled from U30 failures therefore mixes two true causes and is genuinely
+un-diagnosable from the code distribution → correct answer INSUFFICIENT_EVIDENCE.
+Added a grader cohort "U30 debit-failure surge" (kind=ambiguous) plus a unit test
+`test_statistical_abstains_on_ambiguous_code`. The code→cause map stays in
+`sim/ground_truth.py`; the event log carries only the bare code.
+
+**Observed but NOT tuned (governing rule).** With the regenerated data the
+deterministic reference now abstains on 3 of 4 `baseline` "customer" cohorts:
+their realised customer-code share lands just under the pre-existing 0.55
+dominance threshold (a baseline window looks like normal ambient traffic, so
+"nothing anomalous" is a defensible read). This is sampling variance around a
+threshold set at the mean, surfaced by the new code set — I am NOT moving the
+threshold or the labels in response to it. It lowers the closed-world reference
+accuracy vs the old taxonomy and that is reported as-is; it also motivates TASK C
+(the closed-world test is brittle where a lookup meets ambient noise).
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not
