@@ -496,6 +496,66 @@ changed. Seeds parallelised across processes; RF `n_jobs=1` in workers to avoid
 thread×process oversubscription (determinism unaffected — each seed's RNG is
 seeded by the seed).
 
+### 2026-09-05 — TASK A diagnostic re-run RESULTS (40 seeds; full grid, every cell)
+
+Ran the locked grid (`python -m eval.live_experiment` → `artifacts/timeseries.json`).
+One bug found and fixed mid-way with NO change to design or numbers: the first
+full run computed correctly but crashed at the final `json.dump` because
+`crossover_txn`/`grid` held numpy `int64` (from `np.arange` indices). Cast to
+`int`, added a numpy-aware encoder, and made `run()` flush `timeseries.json`
+after every ε-cell so a late failure can't discard completed compute. Re-ran
+clean. This is a serialization fix, not a tuning change.
+
+**H1 — ε sweep, 40 seeds × 50k/seed (2M txns/cell). switchyard − bygari, ₹/seed:**
+
+| ε | bygari | switchyard | diff | 95% CI | verdict | crossover | explore ₹/seed |
+|---:|---:|---:|---:|:--|:--|:--|---:|
+| 0.01 | 2,009,354.9 | 2,009,676.8 | +321.9 | [−1126.2, +1731.8] | indistinguishable | 44,000 | 371.7 |
+| 0.03 | 2,009,354.9 | 2,008,262.2 | −1092.7 | [−2509.8, +465.0] | indistinguishable | none | 1086.7 |
+| 0.10 | 2,009,354.9 | 2,006,741.0 | −2613.9 | [−4134.6, −1041.5] | **distinguishable — switchyard LOSES** | none | 4083.8 |
+
+Reading: over 50k the two are indistinguishable at ε∈{0.01,0.03}; at ε=0.10
+switchyard is **significantly behind** — the ₹4,084/seed exploration bill is not
+repaid inside 50k. Higher ε monotonically lowers the diff (322 → −1093 → −2614)
+and raises exploration cost (372 → 1087 → 4084). Best ε for switchyard = **0.01**
+(cheapest). Reported at full volume including the ε=0.10 loss — that is a
+bygari-favourable cell and it stays in.
+
+**H2 — horizon, ε=0.01, 2,000,000/seed × 10 seeds (20M txns).**
+bygari 80,318,802.8 vs switchyard 80,696,013.6; diff **+377,210.8**, CI
+**[+236,094.7, +511,085.3] → distinguishable, switchyard WINS**; crossover at
+**160,000 txns**. So switchyard's online learning DOES overtake the pretrained
+router given volume, but only after ~160k txns — far beyond the 50k window where
+they look tied. Headline is horizon-dependent: tied over 50k, switchyard ahead
+over 2M.
+
+**H3 — thin slice (large-ticket >₹5k = 12.7% of traffic). switchyard − bygari:**
+
+| region | ε=0.01 | ε=0.03 | ε=0.10 |
+|---|---:|---:|---:|
+| large-ticket (12.7%) | −11,279.4 [−12764,−9829] | −12,184.0 [−13577,−10668] | −12,402.1 [−13919,−10911] |
+| small-ticket (87.3%) | +11,601.3 [+11352,+11833] | +11,091.3 [+10830,+11362] | +9,788.2 [+9534,+10029] |
+| large→pa/pc share (byg / sw) | 0.216 / 0.092 | 0.216 / 0.108 | 0.216 / 0.173 |
+
+At 2M (ε=0.01): large-ticket diff −119,387 CI [−256168, +23373] (**washes out to
+indistinguishable**); small-ticket diff +496,598 CI [+491380, +502666] dominates.
+
+**Two corrections forced by the 40-seed data, both reported at full volume:**
+1. The task's hypothesis (bygari sends ~0 to the starved region and loses there)
+   is **FALSIFIED**: bygari routes *more* large-ticket traffic to pa/pc (0.216 vs
+   switchyard 0.092–0.173) and **earns MORE** in that region across every ε.
+2. My earlier 10-seed narrative — "switchyard makes the better large-ticket
+   decisions" — is **WRONG and hereby corrected**. Switchyard's lower starved
+   share is not skill: `pc` is the truly-best large-ticket processor but is
+   starved in switchyard's legacy init, so the online bandit stays anchored to
+   `pb` and **under-routes to `pc`, losing ~₹12k/seed in the large region.**
+   Switchyard's genuine edge is the small-ticket bulk (+₹11k/seed), which offsets
+   to a wash over 50k and dominates over 2M.
+
+Net honest finding: this simple online switchyard is not a free win vs a strong
+pretrained success-router — indistinguishable over 50k, strictly worse at high ε,
+worse in the starved region it was meant to fix, decisively ahead only at 2M.
+
 ### Open questions
 
 - None outstanding. The one design tension (§4.2/§5 as literally written do not

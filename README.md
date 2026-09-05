@@ -68,27 +68,42 @@ The off-policy value estimators all **overstate their own policy** (ips +2558, s
 
 ---
 
-## Live continuous operation: bygari_baseline vs switchyard — **no detectable difference**
+## Live continuous operation: bygari_baseline vs switchyard — indistinguishable over 50k, switchyard ahead only over 2M
 
-Run both as online learners in parallel over 500,000 fresh transactions (10 seeds × 50k), each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit.
+Run both as online learners in parallel, each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit. This is a **40-seed** re-run with common random numbers (seeds 2000–2039, frozen in NOTES before running), superseding the earlier 10-seed race. Nothing below was tuned to a desired outcome; the full grid is reported, bygari-favourable cells included.
 
 ![cumulative net revenue](artifacts/cumulative_value.png)
 
-| Final cumulative net revenue (₹/seed, mean over 10 seeds, 500k txns) | Value | 95% CI |
-|---|---:|:---:|
-| bygari_baseline | **2,000,806.8** | [1,991,651, 2,010,287] |
-| switchyard (net of exploration) | 1,998,263.6 | [1,987,985, 2,008,988] |
-| switchyard − bygari | **−2,543.2** | [−5,195.9, +4.4] |
+**H1 — exploration sweep (40 seeds × 50,000 txns/seed).** Final net revenue ₹/seed, `switchyard − bygari` by 1000-resample paired bootstrap:
 
-The point estimate has `switchyard` ₹2,543/seed behind, but the **95% CI on the difference is [−5,195.9, +4.4] — it includes zero, so by this project's own crosses-zero rule the two are _indistinguishable_ (no detectable difference), not a win for either.** `switchyard` does not overtake at any recorded point; its exploration cost was ₹937/seed. _(This 10-seed run is superseded by a 40-seed re-run + ε/horizon sweep — see the diagnostic re-run below.)_
+| ε | bygari | switchyard | switchyard − bygari | 95% CI | verdict | crossover | exploration cost/seed |
+|---:|---:|---:|---:|:---:|:---|:---:|---:|
+| 0.01 | 2,009,354.9 | 2,009,676.8 | **+321.9** | [−1,126.2, +1,731.8] | indistinguishable | 44,000 txns | ₹371.7 |
+| 0.03 | 2,009,354.9 | 2,008,262.2 | −1,092.7 | [−2,509.8, +465.0] | indistinguishable | none | ₹1,086.7 |
+| 0.10 | 2,009,354.9 | 2,006,741.0 | **−2,613.9** | [−4,134.6, −1,041.5] | **distinguishable — switchyard loses** | none | ₹4,083.8 |
 
-Why — and note the task's stated hypothesis was **falsified**, reported as-is:
+Over a 50k-txn window the two are **statistically indistinguishable at ε = 0.01 and 0.03** (CI includes zero), and at **ε = 0.10 `switchyard` is significantly _behind_** — the ₹4,084/seed exploration bill is not repaid inside 50k. More exploration hurts here, not helps. The best ε for switchyard is the cheapest one, **0.01**.
+
+**H2 — horizon (best ε = 0.01, 2,000,000 txns/seed × 10 seeds = 20M txns).** Extending the same race 40× longer:
+
+| horizon | bygari | switchyard | switchyard − bygari | 95% CI | verdict | crossover |
+|---|---:|---:|---:|:---:|:---|:---:|
+| 2M txns/seed | 80,318,802.8 | 80,696,013.6 | **+377,210.8** | [+236,094.7, +511,085.3] | **distinguishable — switchyard wins** | 160,000 txns |
+
+Given enough volume, `switchyard`'s online learning **does** overtake the strong pretrained router and pull clearly ahead (+₹377k/seed, CI excludes zero). But it takes **~160,000 transactions** to cross over — far beyond the 50k window where the two look tied. The headline is therefore horizon-dependent and stated as such: **tied over 50k, switchyard ahead over 2M.**
+
+**H3 — where the difference lives (starved large-ticket region vs remainder).** Large-ticket (>₹5,000) traffic is **12.7%** of the stream. Splitting the net difference by region (₹/seed at 50k):
+
+| region (share) | switchyard − bygari | 95% CI | verdict |
+|---|---:|:---:|:---|
+| large-ticket >₹5k (12.7%), ε=0.03 | **−12,184.0** | [−13,576.9, −10,667.5] | distinguishable — **bygari wins the starved region** |
+| small-ticket remainder (87.3%), ε=0.03 | **+11,091.3** | [+10,830.3, +11,362.2] | distinguishable — **switchyard wins the bulk** |
 
 ![starved-region traffic](artifacts/starved_region_traffic.png)
 
-The hypothesis was that `bygari` would send ~0 traffic to the starved large-ticket region and never discover the best option there. It does the **opposite**: its random forest extrapolates pa's success upward on large tickets and routes *into* pa (starved-region share rises to **0.22**), exactly the `direct`-style optimism. The online `switchyard`, whose legacy initialisation already reflects pa being bad on large tickets, *avoids* it (share falls to **0.09**). So switchyard makes the **better large-ticket decisions** — yet does not pull ahead overall, because its exploration cost plus its per-cell online learning (no cross-cell generalisation, slow to move off the heavy legacy prior) offset that gain on the ~87% of traffic that is not large-ticket, leaving the two indistinguishable.
+The task's stated hypothesis — that `bygari` would send ~0 traffic to the starved region and lose there — is **falsified**: `bygari` routes *more* large-ticket traffic to pa/pc (share **0.216**) than the online `switchyard` (share **0.108** at ε=0.03), and it **earns more in that region, not less.** And this also **corrects the earlier 10-seed narrative** in this file, which claimed switchyard made "better large-ticket decisions" — it does not. `pc` is the *truly-best* large-ticket processor (cheapest per-paise on big amounts), but it is starved in switchyard's legacy initialisation, so the conservative online bandit stays anchored to `pb` and **under-routes to `pc`, losing ~₹12k/seed in the large-ticket region.** What switchyard genuinely wins is the **small-ticket bulk** (+₹11k/seed) — enough to offset the large-ticket loss to a wash over 50k, and to dominate over 2M (where the large-ticket gap itself washes out to indistinguishable, CI [−256k, +23k]).
 
-This is coherent with the exploration price curve: at ε = 0.03, exploration buys **honest estimates** but its cost does not translate into a detectable **net-revenue** gain over this horizon. **At 10 seeds the two are statistically indistinguishable — `switchyard` does not pull ahead of a strong pretrained model — reported here at full size because the entire claim is about not fooling yourself.**
+**Bottom line, reported at full size because the whole project is about not fooling yourself:** against a strong pretrained success-router, this simple online `switchyard` is **not a free win** — it is indistinguishable over 50k, strictly worse at high ε, worse in the starved region it was supposed to fix, and only decisively ahead once given 2M transactions. That is the honest shape of the result.
 
 ---
 

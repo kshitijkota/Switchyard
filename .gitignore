@@ -23,3 +23,6 @@ venv/
 /diagnose/cache/statistical_*.json
 /diagnose/cache/anthropic_*.json
 /diagnose/cache/*.log
+
+# transient run logs
+artifacts/*.log
