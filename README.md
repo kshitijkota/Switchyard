@@ -3,7 +3,7 @@
 **Switchyard routes each payment to the processor that maximises expected net revenue, and — unlike a supervised model trained on confounded logs — spends a small, budgeted slice of randomly-routed traffic so its value estimates stay honest in the segments the old policy never explored.**
 
 > ## ⚠️ All data here is synthetic.
-> Every number below is produced by a simulator in this repository with **known, controlled latent ground truth** — no real payment data is used, and no claim is made about any production system. Reproduce everything with `python verify.py`. No figure is hand-written; each is emitted by a script (ABSOLUTE RULE: no number appears in any document unless a script here produced it). *One thing is real:* the **failure codes and their documented meanings** are the published NPCI UPI and Razorpay error codes (see the diagnosis section and `DECISIONS.md`); the routing outcomes, success probabilities and costs attached to them are still simulated.
+> Every number below is produced by a simulator in this repository with **known, controlled latent ground truth** — no real payment data is used, and no claim is made about any production system. No figure is hand-written; each is emitted by a script and reproduced end-to-end by `python verify.py`. *One thing is real:* the **failure codes and their documented meanings** are the published NPCI UPI and Razorpay error codes (see the diagnosis section and `DECISIONS.md`); the routing outcomes, success probabilities and costs attached to them are simulated.
 
 ---
 
@@ -31,7 +31,7 @@ Sweep the exploration rate ε and measure, per ε, how honest the value estimate
 | **0.03** | **+17.3** | +1302.5 | 46.6 | 41238.3 |
 | 0.10 | −254.0 | +1265.2 | 157.0 | 41335.9 |
 
-**Where the curve stops being worth it:** the estimation error on the starved policy crosses honest (~0) at **ε ≈ 0.03**, then *over-corrects* to −₹254 at ε = 0.10 while the exploration cost more than triples (₹47 → ₹157/1k). So the knee is ε ≈ 0.03: near-zero error at modest cost, and nothing bought beyond it. The adversarial policy is starved so deeply (it forces *every* large ticket onto the unexplored `pa`) that even ε = 0.10 only trims its error from ₹1,609 to ₹1,265/1k — honest evaluation there would need a larger budget, and we say so rather than imply ε = 0.03 fixes everything.
+**Where the curve stops being worth it:** the estimation error on the starved policy crosses honest (~0) at **ε ≈ 0.03**, then *over-corrects* to −₹254 at ε = 0.10 while the exploration cost more than triples (₹47 → ₹157/1k). So the knee is ε ≈ 0.03: near-zero error at modest cost, and nothing bought beyond it. The adversarial policy is starved so deeply (it forces *every* large ticket onto the unexplored `pa`) that even ε = 0.10 only trims its error from ₹1,609 to ₹1,265/1k — evaluating it honestly would need a larger exploration budget than ε = 0.03.
 
 ---
 
@@ -43,7 +43,7 @@ The real failure is narrower and sharper, and it is **specific to starved region
 
 ![pa predicted vs true success by ticket size](artifacts/extrapolation.png)
 
-Because the phenomenon only bites in unexplored regions, the simulator's one hidden fact (`pa`'s −0.18 large-ticket weakness) was deliberately and transparently placed in the large-ticket region the legacy policy starves. That placement *is* the phenomenon, not a thumb on the scale — see `NOTES.md` (2026‑09‑04 entries "CRITICAL FINDING" and "Converged on the MINIMAL design") for the full, dated reasoning.
+Because the phenomenon only bites in unexplored regions, the simulator's one hidden fact (`pa`'s −0.18 large-ticket weakness) sits in the large-ticket region the legacy policy starves — that placement is the phenomenon itself. See `NOTES.md` (2026‑09‑04 entries "CRITICAL FINDING" and "Converged on the MINIMAL design") for the full reasoning.
 
 **Generality.** The finding does not depend on the specific legacy rule used here. Any non-random routing policy produces regions with near-zero coverage; the starved region moves, the problem does not. Razorpay Optimizer documents amount, method and issuer as routing conditions, which is why an amount-based rule was chosen.
 
@@ -70,7 +70,7 @@ The off-policy value estimators all **overstate their own policy** (ips +2558, s
 
 ## Live continuous operation: bygari_baseline vs switchyard — indistinguishable over 50k, switchyard ahead only over 2M
 
-Run both as online learners in parallel, each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit. This is a **40-seed** re-run with common random numbers (seeds 2000–2039, frozen in NOTES before running), superseding the earlier 10-seed race. Nothing below was tuned to a desired outcome; the full grid is reported, bygari-favourable cells included.
+Run both as online learners in parallel, each starting from the same confounded legacy log and updating as outcomes arrive. `bygari_baseline` uses its published feedback loop (rolling time-decayed success rates + LR downtime breaker); the online `switchyard` is a per-cell ε-greedy net-revenue bandit. All figures below are over **40 seeds** with common random numbers (seeds 2000–2039).
 
 ![cumulative net revenue](artifacts/cumulative_value.png)
 
@@ -101,15 +101,15 @@ Given enough volume, `switchyard`'s online learning **does** overtake the strong
 
 ![starved-region traffic](artifacts/starved_region_traffic.png)
 
-The task's stated hypothesis — that `bygari` would send ~0 traffic to the starved region and lose there — is **falsified**: `bygari` routes *more* large-ticket traffic to pa/pc (share **0.216**) than the online `switchyard` (share **0.108** at ε=0.03), and it **earns more in that region, not less.** And this also **corrects the earlier 10-seed narrative** in this file, which claimed switchyard made "better large-ticket decisions" — it does not. `pc` is the *truly-best* large-ticket processor (cheapest per-paise on big amounts), but it is starved in switchyard's legacy initialisation, so the conservative online bandit stays anchored to `pb` and **under-routes to `pc`, losing ~₹12k/seed in the large-ticket region.** What switchyard genuinely wins is the **small-ticket bulk** (+₹11k/seed) — enough to offset the large-ticket loss to a wash over 50k, and to dominate over 2M (where the large-ticket gap itself washes out to indistinguishable, CI [−256k, +23k]).
+The expected pattern — that `bygari` would send ~0 traffic to the starved region and lose there — does **not** hold: `bygari` routes *more* large-ticket traffic to pa/pc (share **0.216**) than the online `switchyard` (share **0.108** at ε=0.03), and it **earns more in that region, not less.** `pc` is the *truly-best* large-ticket processor (cheapest per-paise on big amounts), but it is starved in switchyard's legacy initialisation, so the conservative online bandit stays anchored to `pb` and **under-routes to `pc`, losing ~₹12k/seed in the large-ticket region.** What switchyard wins is the **small-ticket bulk** (+₹11k/seed) — enough to offset the large-ticket loss to a wash over 50k, and to dominate over 2M (where the large-ticket gap itself washes out to indistinguishable, CI [−256k, +23k]).
 
-**Bottom line, reported at full size because the whole project is about not fooling yourself:** against a strong pretrained success-router, this simple online `switchyard` is **not a free win** — it is indistinguishable over 50k, strictly worse at high ε, worse in the starved region it was supposed to fix, and only decisively ahead once given 2M transactions. That is the honest shape of the result.
+**Bottom line:** against a strong pretrained success-router, this simple online `switchyard` is **not a free win** — indistinguishable over 50k, strictly worse at high ε, worse in the starved region, and decisively ahead only once given 2M transactions.
 
 ---
 
 ## Policy value: direct beats switchyard on raw value
 
-Stated plainly, and not buried: **`direct` has the higher raw policy value.** On the held-out regime (a different traffic mix and degradation schedule, evaluated exactly once), the true-value ordering is:
+**`direct` has the higher raw policy value.** On the held-out regime (a different traffic mix and degradation schedule, evaluated exactly once), the true-value ordering is:
 
 | Method | True value, held-out (₹/1k) |
 |---|---:|
@@ -131,7 +131,7 @@ Stated plainly, and not buried: **`direct` has the higher raw policy value.** On
 | ₹3k–10k | pa | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **>₹10k** | **pc** | pa ✗ | pa ✗ | ✓ | ✓ | pa ✗ |
 
-On well-covered ticket sizes every method picks correctly. On the starved **>₹10k** bucket the truly-best `pc` is starved for *everyone* (≤46 samples even after exploration), so it stays contested — reported as measured, not smoothed.
+On well-covered ticket sizes every method picks correctly. On the starved **>₹10k** bucket the truly-best `pc` is starved for *everyone* (≤46 samples even after exploration), so it stays contested and no reward-optimising method finds it.
 
 ### Ticket-size crossover (why fees matter)
 
@@ -170,7 +170,7 @@ A single contained job (never routes): given a cohort's failure-code counts and 
 
 **Both correctly abstain on the genuinely-ambiguous `U30` cohort** — the code names two causes, and neither the model nor the rule invents one. That is the headline of the real-code change, and it is the point of the ambiguity: a U30-dominated window is un-diagnosable, and both the model and the rule say so.
 
-Beyond that, the closed-world result with **real** codes matches the earlier invented-code one: a hand-written rule (0.923) still slightly edges gpt-4o-mini (0.846) on clear-accuracy, with **identical** abstention (0.714) and harmful rates (0.100). The two make the *same* two harmful errors — the constructed two-cause blends, where each confidently names the larger cause instead of abstaining. The only difference is on the customer-baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is a defensible read): the rule abstains on one of them, gpt-4o-mini on two, which is what separates 0.923 from 0.846. The offline numbers are **not** presented as language-model performance. That a small LLM does not beat a fixed six-code lookup on this closed-world task — even after swapping in real codes — is exactly what motivates the open-world test in TASK C.
+Beyond that, a hand-written rule (0.923) still slightly edges gpt-4o-mini (0.846) on clear-accuracy, with **identical** abstention (0.714) and harmful rates (0.100). The two make the *same* two harmful errors — the constructed two-cause blends, where each confidently names the larger cause instead of abstaining. The only difference is on the customer-baseline cohorts (a baseline window looks like normal ambient traffic, so "nothing anomalous" is a defensible read): the rule abstains on one of them, gpt-4o-mini on two, which separates 0.923 from 0.846. The offline rule is not a language model. That a small LLM does not beat a fixed seven-code lookup here — even with real codes — is what motivates the open-world test below.
 
 **Disclosure:** provider OpenAI, model `gpt-4o-mini`; 9,779 input / 1,141 output tokens; **estimated cost $0.0022** (hard cap $20, $5 runaway tripwire — never approached); parse-failure rate 0.000. **All inputs are synthetic failure-code counts containing no real transaction or customer data.** The Gemini and Anthropic paths stay selectable; the offline provider runs when no key is present. Numbers reproduce from the committed OpenAI cache with no key.
 
@@ -178,9 +178,9 @@ Beyond that, the closed-world result with **real** codes matches the earlier inv
 
 ## Where semantics actually matter: an open-world test (rule vs trained model vs LLM)
 
-The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is real but says little — six documented codes and five fixed categories are a lookup, not an interpretation. So we add a **held-out open-world set** the rule cannot be pre-written for, and a **third method** — a small trained classifier (multinomial logistic regression on documented-code shares) — that sits between the rule and the LLM. The open-world cohorts (labels fixed before any method ran) contain: **real NPCI/Razorpay codes withheld** from the table and the classifier's training (`Z8`, `U16`, `bank_not_available`, `psp_app_not_available`, `gateway_technical_error`); **free-text gateway messages** with no code; a **red herring** (the ambiguous `U30` dominates, the true signal is a minority code); and **two-cause blends**.
+The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is real but says little — seven documented codes and five fixed categories are a lookup, not an interpretation. So we add a **held-out open-world set** the rule cannot be pre-written for, and a **third method** — a small trained classifier (multinomial logistic regression on documented-code shares) — that sits between the rule and the LLM. The open-world cohorts (labels fixed before any method ran) contain: **real NPCI/Razorpay codes withheld** from the table and the classifier's training (`Z8`, `U16`, `bank_not_available`, `psp_app_not_available`, `gateway_technical_error`); **free-text gateway messages** with no code; a **red herring** (the ambiguous `U30` dominates, the true signal is a minority code); and **two-cause blends**.
 
-**Prediction, stated before the results (as required):** rules and trained models should **win closed-world and fail open-world** (they can only match patterns they were given); the LLM should **lose closed-world and generalise open-world** (it can interpret an unfamiliar code or a free-text message from world knowledge).
+**Prediction, stated before the results:** rules and trained models should **win closed-world and fail open-world** (they can only match patterns they were given); the LLM should **lose closed-world and generalise open-world** (it can interpret an unfamiliar code or a free-text message from world knowledge).
 
 **What actually happened** — accuracy on clear cohorts (harmful-error rate in parentheses):
 
@@ -190,22 +190,22 @@ The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is
 | Trained classifier (LR on code shares) | **1.000** (0.00) | 0.125 (0.40) |
 | LLM (gpt-4o-mini) | 0.846 (0.10) | **0.625** (0.30) |
 
-**The prediction held.** Closed-world, the trained classifier is perfect (1.000) and the rule strong (0.923) — both beat the LLM (0.846). Open-world, both collapse and the **LLM is the only method that generalises** (0.625 vs 0.000 / 0.125): it reads `bank_not_available`, `Z8` and every free-text cohort correctly from knowledge it was never given in a table. And the two failures are different in a way that mirrors this whole project: the **rule fails safe** — it abstains (0.0 accuracy, but only 0.10 harmful), correctly refusing to interpret codes it doesn't recognise; the **trained model fails dangerously** — it extrapolates its closed-world mapping onto inputs it never saw and asserts a **confident wrong cause 40% of the time** (0.40 harmful), the same optimism-under-distribution-shift that the routing half of this project is about. The LLM is not clean either (0.30 harmful — it misreads `psp_app_not_available` and `gateway_technical_error` as customer-side, and over-asserts on one blend), and it does **not** win closed-world. Reported as measured; no scenarios were added after seeing results.
+**The prediction held.** Closed-world, the trained classifier is perfect (1.000) and the rule strong (0.923) — both beat the LLM (0.846). Open-world, both collapse and the **LLM is the only method that generalises** (0.625 vs 0.000 / 0.125): it reads `bank_not_available`, `Z8` and every free-text cohort correctly from knowledge it was never given in a table. And the two failures are different in a way that mirrors this whole project: the **rule fails safe** — it abstains (0.0 accuracy, but only 0.10 harmful), correctly refusing to interpret codes it doesn't recognise; the **trained model fails dangerously** — it extrapolates its closed-world mapping onto inputs it never saw and asserts a **confident wrong cause 40% of the time** (0.40 harmful), the same optimism-under-distribution-shift that the routing half of this project is about. The LLM is not clean either (0.30 harmful — it misreads `psp_app_not_available` and `gateway_technical_error` as customer-side, and over-asserts on one blend), and it does **not** win closed-world.
 
-**Abstention attribution (C3).** The diagnoser's headline abstention is mostly deterministic engineering, not model judgment. On the closed-world ambiguous cohorts the model abstains **0.714 including the sample-size guardrail**, but **4 of those 5 abstentions are the guardrail** — a hard "abstain below 40 failures, no model call" gate. The model's **own** abstention, on the cohorts that actually reached it, is **0.188** (3 of 16). The guardrail was added deliberately after three prompt variants failed to move the number (the model kept asserting on tiny cohorts, abstention stuck at 0.167); it is deterministic engineering and is labelled as such, never presented as model behaviour.
+**Abstention attribution.** The diagnoser's headline abstention is mostly deterministic engineering, not model judgment. On the closed-world ambiguous cohorts the model abstains **0.714 including the sample-size guardrail**, but **4 of those 5 abstentions are the guardrail** — a hard "abstain below 40 failures, no model call" gate. The model's **own** abstention, on the cohorts that actually reached it, is **0.188** (3 of 16). The guardrail was added after three prompt variants failed to move the number (the model kept asserting on tiny cohorts, abstention stuck at 0.167) — deterministic engineering, not model behaviour.
 
 *Reproduce:* `python -m diagnose.threeway` (rule and trained classifier need no key; the LLM reproduces from the committed OpenAI cache). All open-world inputs are synthetic; only the withheld codes and their meanings are real.
 
 ---
 
-## Known limitations (real, unsmoothed)
+## Known limitations
 
 1. **The naive model does not simply "fail."** A well-regularised GBM is a strong, robust *policy* on smooth latent structure — it beats the off-policy estimators on true value. The failure this project demonstrates is *epistemic and conditional on coverage*: `direct` cannot tell a good policy from a money-loser in the region it never explored, and overstates any policy that ventures there.
 2. **ε = 0.03 buys honesty, not a bigger policy.** At this budget switchyard's edge is trustworthy value estimates, not a large true-value gain; the deepest-starved cells (e.g. `pc` on >₹10k, the adversarial trap) are not fully corrected — the price curve shows what a larger budget would cost.
 3. **The simulator models each attempt as an independent draw** (no failure persistence), so absolute recovery counts (3,489/5,000) are optimistic; the *incremental-over-legacy* metric, which is headlined, is unaffected.
 4. **Routing is over discretised `(method, issuer, amount-bucket)` cells**, not continuous amount — a deliberate choice so all four methods share one hypothesis space, at the cost of within-bucket resolution near crossovers.
 5. **The soft degradation regime is unlearnable by every method** (no day-of-week feature), so no method routes around it — latent noise, not a demonstrated win.
-6. **On the closed-world, real-code diagnosis task a hand-written rule still slightly beats the small LLM** (rule 0.923 vs gpt-4o-mini 0.846 clear-accuracy; identical 0.714 abstention and 0.100 harmful — the *same* two blend errors): both correctly abstain on the genuinely-ambiguous `U30` code, both over-assert on the two-cause blends, and the gap is only that gpt-4o-mini abstains on one extra baseline window. A fixed six-code lookup is simple enough that a small LLM does not beat it here — even with real codes — which is what TASK C's open-world test is for.
+6. **On the closed-world, real-code diagnosis task a hand-written rule still slightly beats the small LLM** (rule 0.923 vs gpt-4o-mini 0.846 clear-accuracy; identical 0.714 abstention and 0.100 harmful — the *same* two blend errors): both correctly abstain on the genuinely-ambiguous `U30` code, both over-assert on the two-cause blends, and the gap is only that gpt-4o-mini abstains on one extra baseline window. A fixed seven-code lookup is simple enough that a small LLM does not beat it here — even with real codes — which is what the open-world test is for.
 7. **The online `switchyard` in the live race is a simple per-cell ε-greedy bandit**, deliberately weaker than the batch DR estimator (no cross-cell generalisation, anchored to a heavy legacy prior). It does **not pull ahead of** `bygari_baseline` in the live race — the two are statistically indistinguishable (the difference CI includes zero); a model-based online learner might do better, but that was not the committed design and is not claimed.
 8. **RBI 24-hour pre-debit notification is not implemented** (recovery §).
 
@@ -215,7 +215,7 @@ The closed-world result above (a rule at 0.923 matching gpt-4o-mini at 0.846) is
 
 ```bash
 pip install -r requirements.txt
-python verify.py          # runs tests, regenerates every artifact, reprints every number above (~5 min: includes the 500k live experiment)
+python verify.py          # runs tests, regenerates every artifact, reprints every number above (~15 min: includes the 40-seed live race and the open-world diagnosis eval)
 ```
 
 `verify.py` exits non-zero on any failure and is deterministic on fixed seeds (byte-identical logs/tables, enforced by `tests/test_determinism.py`). The diagnosis numbers reproduce from the committed OpenAI `gpt-4o-mini` cache with **no API key**; set `OPENAI_API_KEY` or `GEMINI_API_KEY` (see `.env.example`) to re-run the model live.
